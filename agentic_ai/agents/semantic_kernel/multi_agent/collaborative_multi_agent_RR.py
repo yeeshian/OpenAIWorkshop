@@ -30,64 +30,29 @@ class ContosoGroupChatManager(GroupChatManager):
     topic: str
 
     termination_prompt: str = (
-    "You are the discussion mediator analysis-planning agent for user questions. Evaluate if we have a complete response:\n"
-    "1. For SINGLE-AGENT tasks (billing queries, security issues, product info):\n"
-    "   - Terminate once the specialist has used their tools and provided data\n"
-    "   - Terminate if specialist indicates they can't help\n"
-    "\n"
-    "2. For MULTI-AGENT tasks:, where user query might have multiple facets, make sure you route appropriate sections of questions to the right agents\n"
-    "   - Terminate when all required information is gathered\n"
-    "   - Terminate if we have clear next steps for the user\n"
-    "\n"
-    "3. ALWAYS terminate if:\n"
-    "   - The response starts with 'FINAL ANSWER:'\n"
-    "   - We have a clear resolution or need user clarification\n"
-    "\n"
-    "Respond with True only if these conditions are met, otherwise False."
-)
+        "You are a Contoso support mediator. Check if the message contains a final answer.\n"
+        "Return True if the message starts with 'FINAL ANSWER:', False otherwise.\n"
+        "\nMessage: {{$lastmessage}}"
+    )
 
     selection_prompt: str = (
-        "You are the discussion mediator. Select the next agent based on these rules:\n"
-        "\n"
-        "1. For greetings or general responses, select 'analysis_planning'\n"
-        "2. For explicit delegations (e.g., 'crm_billing: <task>'), select that agent\n"
-        "3. For questions about:\n"
-        "   - Billing, invoices, subscriptions → select 'crm_billing'\n"
-        "   - Products, promotions → select 'product_promotions'\n"
-        "   - Security, authentication → select 'security_authentication'\n"
-        "4. If unclear, select 'analysis_planning'\n"
-        "\n"
-        "Available agents:\n"
-    "\nParticipants and their expertise:\n{{$participants}}\n"
-    "\nSelection Rules:\n"
-    "1. For DIRECT QUERIES about billing, subscriptions, invoices → crm_billing\n"
-    "2. For DIRECT QUERIES about products, promotions, eligibility → product_promotions\n"
-    "3. For DIRECT QUERIES about security, access, lockouts → security_authentication\n"
-    "4. For COMPLEX QUERIES needing multiple perspectives:\n"
-    "   - Choose the agent with most relevant expertise for current sub-task\n"
-    "   - Consider previous responses and what information is still needed\n"
-    "\nRespond with EXACTLY ONE agent name from the list above, no other text."
-)
+        "You are a Contoso support mediator. Select the next participant based on these rules:\n"
+        "- If message starts with anything relating to billing, crm-billing, select crm_billing\n"
+        "- If message starts with 'product_promotions:', select product_promotions\n"
+        "- If message starts with 'security_authentication:', select security_authentication\n"
+        "- Otherwise, select analysis_planning\n"
+        "\nParticipants: {{$participants}}\n"
+        "Message: {{$lastmessage}}\n"
+        "\nRespond with participant name only."
+    )
 
     result_filter_prompt: str = (
-    "You are the discussion mediator for '{{$topic}}'. Create a clear, actionable response:\n"
-    "For any greeting msg like 'hi', 'hello', 'start' ask politely how you could assist the user\n"
-    "\nFormatting Rules:\n"
-    "1. For SINGLE-AGENT responses:\n"
-    "   - Keep the specialist's specific data and policy references\n"
-    "   - Maintain any structured format (e.g., invoice details)\n"
-    "\n"
-    "2. For MULTI-AGENT discussions:\n"
-    "   - Combine relevant information from all specialists\n"
-    "   - Eliminate redundancies and conflicting information\n"
-    "   - Present a unified, coherent response\n"
-    "\n"
-    "3. ALWAYS ensure the response:\n"
-    "   - Directly answers the user's question\n"
-    "   - Includes specific data/policies mentioned by specialists\n"
-    "   - Is structured and easy to read\n"
-    "\nProvide the final answer that addresses the user's request."
-)
+        "Return ONLY the concrete facts from the specialist's response.\n"
+        "If there are specific numbers (amounts, IDs), include them exactly as given.\n"
+        "Make sure you **ALWAYS** include information to the specific customer ID, you will get this info from specialized agents \n"
+        "For example, if you see dollar amounts or invoice numbers or percentage numbers or specific promotional plans and such, those **MUST** be in the final response.\n"
+        "Format: In addition to the specifics, your response needs to be empathetic and helpful to customer concerns.\n"
+    )
 
     def __init__(self, topic: str, service: ChatCompletionClientBase, **kwargs) -> None:
         super().__init__(topic=topic, service=service, **kwargs)
@@ -226,10 +191,30 @@ class Agent(BaseAgent):
         self.chat_history = ChatHistory()  # Use SDK's ChatHistory
         self.max_history_size = 10
         self.session_id = session_id
+        self._initialized = False  # Initialize the flag used in setup and chat
 
     def agent_response_callback(self, message: ChatMessageContent) -> None:
-        """Callback function to retrieve agent responses."""
-        logger.debug(f"**{message.name}**\n{message.content}")
+        """Callback function to retrieve agent responses and log tool usage."""
+        try:
+            # Log regular messages
+            if message.role == AuthorRole.ASSISTANT:
+                logger.info(f"\n=== {message.name}'s Response ===\n{message.content}\n")
+            
+            # Log tool usage with details if it's a tool call
+            if hasattr(message, 'function_name') and message.function_name:
+                tool_info = f"{message.name} -> {message.function_name}"
+                if hasattr(self, 'tool_usage'):
+                    self.tool_usage.append(tool_info)
+                logger.info(
+                    f"\n=== Tool Usage ===\n"
+                    f"Agent: {message.name}\n"
+                    f"Tool: {message.function_name}\n"
+                    f"Arguments: {message.function_arguments}\n"
+                    f"Response: {message.content}\n"
+                )
+        except Exception as e:
+            # Log the error but don't raise it to allow the conversation to continue
+            logger.debug(f"Error in agent_response_callback: {str(e)}")
 
     def get_chat_history(self) -> ChatHistory:
         """Get the chat history."""
@@ -278,16 +263,17 @@ class Agent(BaseAgent):
                     name="crm_billing",
                     description="CRM & Billing Agent",
                     instructions=(
-                        "You are the CRM & Billing Agent.\n"
-                        "- Query structured CRM / billing systems for account, subscription, "
-                        "invoice, and payment information as needed.\n"
-                        "- For each response you **MUST** cross‑reference relevant *Knowledge Base* articles on billing policies, payment "
-                        "processing, refund rules, etc., to ensure responses are accurate "
-                        "and policy‑compliant.\n"
-                        "- Reply with concise, structured information and flag any policy "
-                        "concerns you detect.\n"
-                        "Only respond with data you retrieve using your tools.\n"
-                        "DO NOT respond to anything out of your domain."
+                        "You are the CRM & Billing Agent. For billing queries:\n"
+                        "1. Use get_invoice_payments to check current invoice status\n"
+                        "2. Use get_billing_summary to get total amounts\n"
+                        "3. In your response, ALWAYS include:\n"
+                        "   - The exact total amount due\n"
+                        "   - The specific invoice ID with outstanding balance\n"
+                        "   - Only state facts from the tools\n"
+                        "4. Format your response like this:\n"
+                        "   Total due: $X.XX\n"
+                        "   Outstanding on Invoice ID: XXXX\n"
+                        "   Status: <paid/unpaid>"
                     ),
                     included_tools=[
                         "ContosoMCP-get_all_customers",
@@ -352,36 +338,38 @@ class Agent(BaseAgent):
                     instructions=(
                         "You are the Analysis & Planning Agent (the planner/orchestrator).\n"
                         "\n"
-                        "1. Decide if the user’s request can be satisfied directly:\n"
-                        "   - If YES (e.g. greetings, very simple Q&A), answer immediately using the prefix:\n"
-                        "     FINAL ANSWER: <your reply>\n"
+                        "1. First, check if this is a basic interaction:\n"
+                        "   - For greetings (hi, hello, hey), thank you messages, or simple acknowledgments\n"
+                        "   - Respond directly with either asking if any help is needed and if not, send a friendly reply: FINAL ANSWER: <your friendly reply>\n"
                         "\n"
-                        "2. Otherwise you MUST delegate atomic sub‑tasks one‑by‑one to specialists.\n"
-                        "   - Output format WHEN DELEGATING (strict):\n"
-                        "       <specialist_name>: <task>\n"
-                        "     – No other text, no quotation marks, no ‘FINAL ANSWER’.\n"
-                        "   - Delegate only one sub‑task per turn, then wait for the specialist’s reply.\n"
+                        "2. For all other requests, analyze the query and route to specialists and leverage right tools they have to answer the the query:\n"
+                         "It is possible that it is a query that only needs response from one specialist, in that case, don't route to multiple specialists.\n"
+                         "understand the question to see if it needs to be routed to multiple specialists.\n"
+                        "   Route to crm_billing if query involves:\n"
+                        "   - Billing, invoices, payments, subscriptions, account status, usage, refunds\n"
                         "\n"
-                        "3. After all required information is gathered, compose ONE comprehensive response and\n"
-                        "   send it to the user prefixed with:\n"
-                        "   FINAL ANSWER: <your synthesized reply>\n"
+                        "   Route to product_promotions if query involves:\n"
+                        "   - Products, promotions, offers, discounts, pricing, eligibility, deals\n"
                         "\n"
-                        "4. If you need clarification from the user, ask it immediately and prefix with\n"
-                        "   FINAL ANSWER: <your question>\n"
+                        "   Route to security_authentication if query involves:\n"
+                        "   - Security, login issues, authentication, account access, lockouts\n"
                         "\n"
-                        "Specialist directory – choose the SINGLE best match for each sub‑task:\n"
-                        "- crm_billing – Accesses CRM & billing systems for account, subscription, invoice,\n"
-                        "  payment status, refunds and policy compliance questions.\n"
-                        "- product_promotions – Provides product catalogue details, current promotions,\n"
-                        "  discount eligibility rules and T&Cs from structured sources & FAQs.\n"
-                        "- security_authentication – Investigates authentication logs, account lock‑outs,\n"
-                        "  security incidents; references security KBs and recommends remediation steps.\n"
+                        "   Delegation format (strict):\n"
+                        "   <specialist_name>: <describe what information is needed>\n"
+                        "   - One task per turn, wait for response\n"
+                        "\n"
+                        "3. After specialists provide information:\n"
+                        "   FINAL ANSWER: <synthesized response>\n"
+                        "\n"
+                        "4. If query is unclear, like ID is not provided:\n"
+                        "   FINAL ANSWER: <your clarifying question>\n"
                         "\n"
                         "STRICT RULES:\n"
-                        "- Do not emit planning commentary or bullet lists to the user.\n"
-                        "- Only ‘FINAL ANSWER’ messages or specialist delegations are allowed.\n"
-                        "- After all agents discuss, make sure you respond only relevant information asked as per user request.\n"
-                        "- Never include ‘FINAL ANSWER’ when talking to a specialist.\n"
+                        "- Handle greetings and basic interactions yourself\n"
+                        "- For all other queries, route to appropriate specialist based on keywords\n"
+                        "- Let specialists use their tools - don't specify which tools they should use\n"
+                        "- Never show routing decisions or specialist names to the user\n"
+                        "- Never include 'FINAL ANSWER' when talking to specialists\n"
                     ),
                 ),
             ]
@@ -391,7 +379,7 @@ class Agent(BaseAgent):
                 manager=ContosoGroupChatManager(
                     topic="Handle user request",
                     service=service,
-                    max_rounds=5,
+                    max_rounds=1,
                 ),
                 agent_response_callback=self.agent_response_callback,
             )
@@ -408,21 +396,10 @@ class Agent(BaseAgent):
 
     async def chat_async(self, user_input: str) -> str:
         try:
-            # Reset for new conversations or if not initialized
-            if user_input.lower() in ["hi", "hello", "start"] or not self._initialized:
-                # Stop existing runtime if it exists
-                if self._group_chat_runtime:
-                    try:
-                        await self._group_chat_runtime.stop()
-                    except Exception:
-                        pass
-                self._orchestration = None
-                self._group_chat_runtime = None
-                self._initialized = False
-                self.chat_history = ChatHistory()  # Reset chat history
-
-            # Initialize team if needed
-            await self._setup_team()
+            # One-time initialization when first starting
+            if not self._initialized:
+                self.chat_history = ChatHistory()  # Create fresh history only on first use
+                await self._setup_team()
 
             # Add user message to chat history
             self.chat_history.add_message(
@@ -433,6 +410,9 @@ class Agent(BaseAgent):
             )
 
             try:
+                # Create lists to track tool usage during this conversation
+                self.tool_usage = []
+                
                 # Use invoke with the chat history
                 result = await self._orchestration.invoke(
                     task=user_input,
@@ -441,6 +421,13 @@ class Agent(BaseAgent):
                 
                 response = await result.get()
                 final_response = str(response.content)
+
+                # Create a summary of tool usage
+                if hasattr(self, 'tool_usage') and self.tool_usage:
+                    tools_summary = "\n\n=== Tools Used ===\n"
+                    for tool in self.tool_usage:
+                        tools_summary += f"- {tool}\n"
+                    logger.info(tools_summary)
 
                 # Add assistant response to chat history
                 self.chat_history.add_message(
