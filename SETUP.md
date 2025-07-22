@@ -65,40 +65,87 @@ pip install -r requirements.txt
 Rename `.env.sample` to `.env` and fill in all required fields:  
   
 ```bash  
-#User to replace your-openai-service-endpoint with their model project deployment in Azure AI Foundry
-#e.g. https://my-ai-services98765432111.openai.azure.com/
-AZURE_OPENAI_ENDPOINT="https://your-openai-service-endpoint.openai.azure.com"
-
-#User to replace your-openai-api-key with their project API Key in Azure AI Foundry
-AZURE_OPENAI_API_KEY="your-openai-api-key"
-
-#User to replace your-agent with name of agent python file
-#E.g. westus3.api.azureml.ms;12abcdef-12ef-...................wxyz;rg-name;foundry-project-name
-AZURE_AI_AGENT_PROJECT_CONNECTION_STRING="your-openai-project-connection-string"
-
-#User to replace model name deployed in foundry if different from gpt-4o
-AZURE_OPENAI_CHAT_DEPLOYMENT="gpt-4o"
-AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME="gpt-4o"
-
-#User to replace model version deployed in foundry if different from below
-AZURE_OPENAI_API_VERSION="2025-01-01-preview"
-OPENAI_MODEL_NAME="gpt-4.1-2025-04-14"
-
-#User should not need to change the MCP and backend server URLs unless these are not available on your local environment
-BACKEND_URL="http://localhost:7000"
-MCP_SERVER_URI="http://localhost:8000/sse"
-
-#Check if this is still needed
-DB_PATH="data/contoso.db"
-
-# Specify your agent Python module path  
+############################################  
+#  Azure OpenAI – chat model configuration #  
+############################################  
+# Replace with your model-deployment endpoint in Azure AI Foundry  
+AZURE_OPENAI_ENDPOINT="https://YOUR-OPENAI-SERVICE-ENDPOINT.openai.azure.com"  
+  
+# Replace with your Foundry project’s API key  
+AZURE_OPENAI_API_KEY="YOUR-OPENAI-API-KEY"  
+  
+# Connection-string that identifies your Foundry project / workspace  
+AZURE_AI_AGENT_PROJECT_CONNECTION_STRING="YOUR-OPENAI-PROJECT-CONNECTION-STRING"  
+  
+# Model deployment & API version  
+AZURE_OPENAI_CHAT_DEPLOYMENT="gpt-4o"  
+AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME="gpt-4o"  
+AZURE_OPENAI_API_VERSION="2025-01-01-preview"  
+OPENAI_MODEL_NAME="gpt-4.1-2025-04-14"  
+  
+############################################  
+#     Local URLs for backend & MCP server  #  
+############################################  
+BACKEND_URL="http://localhost:7000"  
+MCP_SERVER_URI="http://localhost:8000/sse"  
+  
+############################################  
+#            (Optional) SQLite DB          #  
+############################################  
+DB_PATH="data/contoso.db"  
+  
+############################################  
+#         Agent module to be executed      #  
+############################################  
+# AGENT_MODULE="agents.autogen.multi_agent.reflection_agent"
 # AGENT_MODULE="agents.autogen.single_agent.loop_agent"
-AGENT_MODULE="path_to_your_agent_module"
-
+# AGENT_MODULE="agents.autogen.multi_agent.collaborative_multi_agent_round_robin"
+# AGENT_MODULE="agents.autogen.multi_agent.collaborative_multi_agent_selector_group"
+# AGENT_MODULE="agents.autogen.multi_agent.handoff_multi_agent_domain"
+# AGENT_MODULE="agents.semantic_kernel.multi_agent.collaborative_multi_agent"
+# AGENT_MODULE="agents.semantic_kernel.multi_agent.a2a.collaborative_multi_agent"
+AGENT_MODULE="agents.autogen.single_agent.loop_agent"  
+  
+# -----------------------------------------------------------  
+# If you are experimenting with Logistics-A2A, uncomment:  
+# LOGISTIC_MCP_SERVER_URI="http://localhost:8100/sse"  
+# LOGISTICS_A2A_URL="http://localhost:9100"  
+# -----------------------------------------------------------  
+  
+  
+#############################################################  
+#          Cosmos DB – state persistence settings           #  
+#############################################################  
+# Endpoint for your Cosmos DB account (SQL API)  
+COSMOSDB_ENDPOINT="https://YOUR-COSMOS-ACCOUNT.documents.azure.com:443/"  
+  
+# ---------  Choose ONE authentication method  --------------  
+# (1) Account key  
+#COSMOSDB_KEY="YOUR-COSMOS-ACCOUNT-KEY"  
+  
+# (2) Azure AD service-principal (preferred in production)  
+#AAD_CLIENT_ID="00000000-0000-0000-0000-000000000000"  
+#AAD_CLIENT_SECRET="YOUR-AAD-CLIENT-SECRET"  
+#AAD_TENANT_ID="11111111-1111-1111-1111-111111111111"  
+# -----------------------------------------------------------  
+  
+# Logical (application) tenant for data isolation  
+# Leave as "default" unless you partition data by customer / org  
+DATA_TENANT_ID="default"  
+  
+# Database & container names (created automatically if not present)  
+COSMOSDB_DB_NAME="ai_state_db"  
+COSMOSDB_CONTAINER_NAME="state_store"  
 ```
 
 **Note:**    
-- Make sure your Azure resources are configured to use the correct model deployment names, endpoints, and API versions.  
+#### Choosing a State Store  
+  
+- **Do nothing** ➜ the workshop uses an in-memory Python `dict` (fast, but data is lost when the process exits).  
+- **Fill in the Cosmos variables** ➜ the app automatically switches to an Azure Cosmos DB container with a hierarchical partition-key (`/tenant_id + /id`) so chat history survives restarts and scales across instances.  
+  
+> If neither `COSMOSDB_KEY` nor the AAD credential set is provided, the code silently falls back to the in-memory store.  
+#### Make sure your Azure resources are configured to use the correct model deployment names, endpoints, and API versions.  
   
 ---  
   
