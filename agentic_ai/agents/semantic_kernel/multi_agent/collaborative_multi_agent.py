@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import List, Optional
 
-from base_agent import BaseAgent
+from agents.base_agent import BaseAgent
 from semantic_kernel.agents import AgentGroupChat, ChatCompletionAgent
 from semantic_kernel.agents.strategies import (
     KernelFunctionSelectionStrategy,
@@ -12,7 +12,7 @@ from semantic_kernel.connectors.ai.function_choice_behavior import (
     FunctionChoiceBehavior,
 )
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
-from semantic_kernel.connectors.mcp import MCPSsePlugin
+from semantic_kernel.connectors.mcp import MCPStreamableHttpPlugin
 from semantic_kernel.contents import ChatHistoryTruncationReducer
 from semantic_kernel.functions import KernelArguments, KernelFunctionFromPrompt
 
@@ -69,7 +69,7 @@ class Agent(BaseAgent):
         )
 
         # 2. ---------- Shared MCP SSE plugin ----------------------------
-        self.contoso_plugin = MCPSsePlugin(
+        self.contoso_plugin = MCPStreamableHttpPlugin(
             name="ContosoMCP",
             description="Contoso MCP Plugin",
             url=self.mcp_server_uri,

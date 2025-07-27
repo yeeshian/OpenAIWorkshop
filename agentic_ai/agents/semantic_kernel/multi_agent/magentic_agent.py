@@ -3,16 +3,23 @@ import re
 
 from semantic_kernel.agents import (
     ChatCompletionAgent,
-    GroupChatOrchestration,
-    RoundRobinGroupChatManager,
+    MagenticOrchestration,
+    StandardMagenticManager,
+    
+    
 )
 from semantic_kernel.agents.runtime import InProcessRuntime
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.connectors.mcp import MCPStreamableHttpPlugin
 from semantic_kernel.contents import ChatMessageContent
-
+import logging
 from agents.base_agent import BaseAgent  # adjust path
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 class Agent(BaseAgent):
     def __init__(self, state_store, session_id) -> None:
@@ -25,7 +32,7 @@ class Agent(BaseAgent):
         # ✅ store past turns
         self._conversation_history: list[str] = []
 
-        self._orchestration: GroupChatOrchestration | None = None
+        self._orchestration: MagenticOrchestration | None = None
 
     async def setup_agents(self) -> None:
         if self._initialized:
@@ -40,46 +47,65 @@ class Agent(BaseAgent):
         )
         await self._mcp_plugin.connect()
 
-        primary_agent = ChatCompletionAgent(
+
+        crm_billing = ChatCompletionAgent(
             service=AzureChatCompletion(deployment_name=self.azure_deployment),
-            name="PrimaryAgent",
-            description="You are a helpful assistant answering customer questions for internet provider Contosso.",
-            instructions=(
-                "You are a helpful assistant. Use the available MCP tools to find info and answer questions. "
-                "You send your response to the secondary agent for review before replying to the user."
-                "If there was context from previous turns such as customer ID, include it to find best answer in your response."
-                "If you couldn't find customer ID from previous context, and the response from secondary agent is not sure about it, **ONLY THEN** ask user to provide it."
-                "Again don't assume ID, only pay close attention to previous chat context and secondary agent's response to see if user provided it"
-                "You only ask the user to provide ID, if none of the conversation context with user or secondary has it."
-                "Respond to the user whatever was final answer from the secondary agent."
-            ),
+            name="crm_billing",
+            description="Query  CRM / billing systems for account, subscription, "
+            "invoice, and payment information",
+            instructions="You are the CRM & Billing Agent.\n"
+            "- Query structured CRM / billing systems for account, subscription, "
+            "invoice, and payment information as needed.\n"
+            "- For each response you **MUST** cross‑reference relevant *Knowledge Base* articles on billing policies, payment "
+            "processing, refund rules, etc., to ensure responses are accurate "
+            "and policy‑compliant.\n"
+            "- Reply with concise, structured information and flag any policy "
+            "concerns you detect.\n"
+            "Only respond with data you retrieve using your tools.\n"
+            "DO NOT respond to anything out of your domain.",
             plugins=[self._mcp_plugin],
         )
 
-        secondary_agent = ChatCompletionAgent(
+        product_promotions = ChatCompletionAgent(
             service=AzureChatCompletion(deployment_name=self.azure_deployment),
-            name="SecondaryAgent",
-            description="You are a supervisor assistant who the primary agent reports to before answering user",
-            instructions=(
-                "Make sure you double check the primary agent's response for accuracy and completeness, you can provide improvement feedback if needed."
-                "If you are not sure of customer ID, use the one from primary agent's response."
-                "Ask clarifying questions if the user is not clear, like if unsure about customer ID, see if primary agent used any ID to answer the question first time, if yes use that ID."
-                "If primary agent also has been unsure and you can't find it either from previous context **ONLY THEN** ask user to provide it."
-                "After reviewing, suggest the primary response what to answer to the user finally and include details on specifics such as invoice, bill, refund, etc promotion offers."
-            ),
+            name="product_promotions",
+            description="Retrieve promotional offers, product availability, eligibility ",
+            instructions="You are the Product & Promotions Agent.\n"
+            "- Retrieve promotional offers, product availability, eligibility "
+            "criteria, and discount information from structured sources.\n"
+            "- For each response you **MUST** cross‑reference relevant *Knowledge Base* FAQs, terms & conditions, "
+            "and best practices.\n"
+            "- Provide factual, up‑to‑date product/promo details."
+            "Only respond with data you retrieve using your tools.\n"
+            "DO NOT respond to anything out of your domain.",
             plugins=[self._mcp_plugin],
         )
 
-        self._agents = [primary_agent, secondary_agent]
+        security_authentication = ChatCompletionAgent(
+            service=AzureChatCompletion(deployment_name=self.azure_deployment),
+            name="security_authentication",
+            description="Investigate authentication logs, account lockouts, and security incidents",
+            instructions="You are the Security & Authentication Agent.\n"
+            "- Investigate authentication logs, account lockouts, and security "
+            "incidents in structured security databases.\n"
+            "- For each response you **MUST** cross‑reference relevant *Knowledge Base* security policies and "
+            "lockout troubleshooting guides.\n"
+            "- Return clear risk assessments and recommended remediation steps."
+            "Only respond with data you retrieve using your tools.\n"
+            "DO NOT respond to anything out of your domain.",
+            plugins=[self._mcp_plugin],
+        )
+
+        self._agents = [crm_billing, product_promotions, security_authentication ]
         self._initialized = True
 
         if self._orchestration is None:
             def agent_response_callback(message: ChatMessageContent) -> None:
                 print(f"**{message.name}**\n{message.content}")
 
-            self._orchestration = GroupChatOrchestration(
+            self._orchestration = MagenticOrchestration(
                 members=self._agents,
-                manager=RoundRobinGroupChatManager(max_rounds=3),
+                manager=StandardMagenticManager(max_round_count=5, chat_completion_service=AzureChatCompletion(deployment_name=self.azure_deployment)),
                 agent_response_callback=agent_response_callback,
             )
 
@@ -146,16 +172,17 @@ class Agent(BaseAgent):
         return str(final_result)
 
 
-# # --------------------------- Manual test helper --------------------------- #
-# if __name__ == "__main__":
-#     async def _demo():
-#         dummy_state = {}
-#         agent = Agent(dummy_state, session_id="demo")
-#         while True:
-#             question = input(">>> ")
-#             if question.lower() in {"exit", "quit"}:
-#                 break
-#             answer = await agent.chat_async(question)
-#             print("\n>>> Assistant reply:\n", answer)
+if __name__ == "__main__":
 
-#     asyncio.run(_demo())
+    async def _demo() -> None:
+        dummy_state: dict = {}
+        agent = Agent(dummy_state, session_id="demo")
+        user_question = "My customer id is 101, why is my internet bill so high?"
+        answer = await agent.chat_async(user_question)
+        print("\n>>> Assistant reply:\n", answer)
+        try:
+            await agent.contoso_plugin.close()
+        except Exception as exc:
+            logger.warning(f"SSE plugin close failed: {exc}")
+
+    asyncio.run(_demo())
