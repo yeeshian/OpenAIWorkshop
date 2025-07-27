@@ -7,7 +7,7 @@ from autogen_agentchat.conditions import TextMessageTermination
 from autogen_core import CancellationToken  
   
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient  
-from autogen_ext.tools.mcp import SseServerParams, mcp_server_tools  
+from autogen_ext.tools.mcp import StreamableHttpServerParams, mcp_server_tools  
   
 from agents.base_agent import BaseAgent  
   
@@ -43,7 +43,7 @@ class Agent(BaseAgent):
   
         try:  
             # 1. -----------------  Shared Tooling (Knowledge Base access)  -----------------  
-            server_params = SseServerParams(  
+            server_params = StreamableHttpServerParams(  
                 url=self.mcp_server_uri,  
                 headers={"Content-Type": "application/json"},  
                 timeout=30,  

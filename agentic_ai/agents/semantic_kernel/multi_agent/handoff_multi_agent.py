@@ -3,7 +3,7 @@ import logging
 from agents.base_agent import BaseAgent
 from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
-from semantic_kernel.connectors.mcp import MCPSsePlugin
+from semantic_kernel.connectors.mcp import MCPStreamableHttpPlugin
 
 # Configure logging
 logging.basicConfig(
@@ -31,7 +31,7 @@ class Agent(BaseAgent):
         )
 
         # Set up the SSE plugin for the MCP service.
-        contoso_plugin = MCPSsePlugin(
+        contoso_plugin = MCPStreamableHttpPlugin(
             name="ContosoMCP",
             description="Contoso MCP Plugin",
             url=self.mcp_server_uri,
