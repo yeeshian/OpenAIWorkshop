@@ -56,7 +56,7 @@ pip install -r requirements.txt
 1. Login to ai.azure.com. Create account if you don't already have access to an account.
 2. Create project, use new hub is none exists. This will setup a hub, project container, AI services, Storage account and Key Vault
 3. Use API Key, Azure OpenAI Service endpoint and Project connection string and add to .env file (next step)
-4. On project page, go to Models + endpoints -> Deploy model -> Deploy base model -> gpt-4o
+4. On project page, go to Models + endpoints -> Deploy model -> Deploy base model -> gpt-4.1
 5. Select deployment type (Standard, Global Standard etc.) and region if desired
 6. Customize deployment details to reduce tokens per minute to 10K, disable dynamic quote 
   
@@ -74,25 +74,22 @@ AZURE_OPENAI_ENDPOINT="https://YOUR-OPENAI-SERVICE-ENDPOINT.openai.azure.com"
 # Replace with your Foundry project’s API key  
 AZURE_OPENAI_API_KEY="YOUR-OPENAI-API-KEY"  
   
-# Connection-string that identifies your Foundry project / workspace  
+# Connection-string that identifies your Foundry project / workspace. Only needed if you're using Azure Agent Service
 AZURE_AI_AGENT_PROJECT_CONNECTION_STRING="YOUR-OPENAI-PROJECT-CONNECTION-STRING"  
   
 # Model deployment & API version  
-AZURE_OPENAI_CHAT_DEPLOYMENT="gpt-4o"  
-AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME="gpt-4o"  
+AZURE_OPENAI_CHAT_DEPLOYMENT="gpt-4.1"  
+AZURE_AI_AGENT_MODEL_DEPLOYMENT_NAME="gpt-4.1"  
 AZURE_OPENAI_API_VERSION="2025-01-01-preview"  
-OPENAI_MODEL_NAME="gpt-4.1-2025-04-14"  
+OPENAI_MODEL_NAME="gpt-4.1-2025-04-14"  #only applicable for Autogen
   
 ############################################  
 #     Local URLs for backend & MCP server  #  
 ############################################  
 BACKEND_URL="http://localhost:7000"  
-MCP_SERVER_URI="http://localhost:8000/sse"  
+MCP_SERVER_URI="http://localhost:8000/mcp"  
   
 ############################################  
-#            (Optional) SQLite DB          #  
-############################################  
-DB_PATH="data/contoso.db"  
   
 ############################################  
 #         Agent module to be executed      #  
