@@ -27,7 +27,7 @@ python -m venv venv
 venv\Scripts\activate
 ```
 ```sh
-# Install dependencies from folder where this file resides
+# Install dependencies from `agentic_ai\applications`
 pip install -r requirements.txt  
 ```
 
