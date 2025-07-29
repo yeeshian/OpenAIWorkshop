@@ -1,18 +1,22 @@
 import asyncio
-import re
-
+import logging
 from semantic_kernel.agents import (
     ChatCompletionAgent,
     GroupChatOrchestration,
     RoundRobinGroupChatManager,
+    ChatHistoryAgentThread,
 )
 from semantic_kernel.agents.runtime import InProcessRuntime
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from semantic_kernel.connectors.mcp import MCPStreamableHttpPlugin
 from semantic_kernel.contents import ChatMessageContent
+from agents.base_agent import BaseAgent
 
-from agents.base_agent import BaseAgent  # adjust path
-
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 class Agent(BaseAgent):
     def __init__(self, state_store, session_id) -> None:
@@ -20,11 +24,20 @@ class Agent(BaseAgent):
         self._agents = None
         self._mcp_plugin = None
         self._initialized = False
-        self._customer_id = None
+        self._thread: ChatHistoryAgentThread | None = None
 
-        # ✅ store past turns
+        # Restore thread if available
+        if state_store and isinstance(state_store, dict) and "thread" in state_store:
+            try:
+                self._thread = state_store["thread"]
+                logger.info("Restored thread from SESSION_STORE")
+            except Exception as e:
+                logger.warning(f"Could not restore thread: {e}")
+
+        # Restore customer ID if available
+        self._customer_id = state_store.get("customer_id")
+
         self._conversation_history: list[str] = []
-
         self._orchestration: GroupChatOrchestration | None = None
 
     async def setup_agents(self) -> None:
@@ -47,10 +60,8 @@ class Agent(BaseAgent):
             instructions=(
                 "You are a helpful assistant. Use the available MCP tools to find info and answer questions. "
                 "You send your response to the secondary agent for review before replying to the user."
-                "If there was context from previous turns such as customer ID, include it to find best answer in your response."
-                "If you couldn't find customer ID from previous context, and the response from secondary agent is not sure about it, **ONLY THEN** ask user to provide it."
-                "Again don't assume ID, only pay close attention to previous chat context and secondary agent's response to see if user provided it"
-                "You only ask the user to provide ID, if none of the conversation context with user or secondary has it."
+                "Again **DON'T** assume ID, only pay close attention to previous chat context and secondary agent's response to see if user provided it"
+                "If unsure of the customer ID, **ALWAYS ASK NEVER ASSUME**"
                 "Respond to the user whatever was final answer from the secondary agent."
             ),
             plugins=[self._mcp_plugin],
@@ -62,10 +73,9 @@ class Agent(BaseAgent):
             description="You are a supervisor assistant who the primary agent reports to before answering user",
             instructions=(
                 "Make sure you double check the primary agent's response for accuracy and completeness, you can provide improvement feedback if needed."
-                "If you are not sure of customer ID, use the one from primary agent's response."
-                "Ask clarifying questions if the user is not clear, like if unsure about customer ID, see if primary agent used any ID to answer the question first time, if yes use that ID."
-                "If primary agent also has been unsure and you can't find it either from previous context **ONLY THEN** ask user to provide it."
+                "If NOT, **YOU MUST ASK** user to provide it."
                 "After reviewing, suggest the primary response what to answer to the user finally and include details on specifics such as invoice, bill, refund, etc promotion offers."
+                "If unsure of the customer ID, **ALWAYS ASK NEVER ASSUME**"
             ),
             plugins=[self._mcp_plugin],
         )
@@ -83,70 +93,46 @@ class Agent(BaseAgent):
                 agent_response_callback=agent_response_callback,
             )
 
-    def get_agents(self):
-        if not self._initialized:
-            raise RuntimeError("Call setup_agents() first!")
-        return self._agents
-
-    async def cleanup(self):
-        if self._mcp_plugin:
-            try:
-                await self._mcp_plugin.close()
-            except Exception:
-                pass
-        self._mcp_plugin = None
-        self._initialized = False
-        self._agents = None
-
     async def chat_async(self, user_input: str) -> str:
+        await self.setup_agents()
+
+        # Extract customer ID if present in user input
+        import re
         match = re.search(r"customer\s*id[:\s]*([0-9]+)", user_input, re.IGNORECASE)
         if match:
             self._customer_id = match.group(1)
+            self.state_store["customer_id"] = self._customer_id
 
+        # Optionally, prepend customer ID to user input if known and not present
         if self._customer_id and "customer id" not in user_input.lower():
             user_input = f"Customer ID: {self._customer_id}\n{user_input}"
 
-        await self.setup_agents()
+        # Pass user input and persistent thread to the agent
+        response = await self._agents[0].get_response(messages=user_input, thread=self._thread)
+        response_content = str(response.content)
+        self._thread = response.thread
+        if self._thread:
+            self._setstate({"thread": self._thread})
 
-        # ✅ Append new user input to the stored history
-        self._conversation_history.append(f"User: {user_input}")
-
-        # ✅ Combine whole history into a single task string
-        task_text = "\n".join(self._conversation_history)
-
-        runtime = InProcessRuntime()
-        runtime.start()
-
-        final_result = ""
-        try:
-            orchestration_result = await self._orchestration.invoke(
-                task=task_text,
-                runtime=runtime
-            )
-            final_result = await orchestration_result.get()
-        except Exception as e:
-            final_result = f"Error during orchestration: {e}"
-        finally:
-            await runtime.stop_when_idle()
-
-        # ✅ Store assistant response in the history too
-        self._conversation_history.append(f"Assistant: {final_result}")
-        # # Fallback if orchestrator did not produce final answer
-        # if not final_answer:
-        #     final_answer = "Sorry, the team could not reach a conclusion within the allotted turns."
-
-
-
-        # ✅ Also store for UI purposes if needed by your frontend
+        # Track user/assistant messages for UI
         self.append_to_chat_history([
-            {"role": "user", "content": str (user_input)},
-            {"role": "assistant", "content": str (final_result)},
+            {"role": "user", "content": user_input},
+            {"role": "assistant", "content": response_content},
         ])
+        return response_content
 
-        return str(final_result)
+    # async def cleanup(self):
+    #     if self._mcp_plugin:
+    #         try:
+    #             await self._mcp_plugin.close()
+    #         except Exception:
+    #             pass
+    #     self._mcp_plugin = None
+    #     self._initialized = False
+    #     self._agents = None
+    #     self._thread = None
 
-
-# # --------------------------- Manual test helper --------------------------- #
+# #Manual test helper (optional)
 # if __name__ == "__main__":
 #     async def _demo():
 #         dummy_state = {}
@@ -157,5 +143,4 @@ class Agent(BaseAgent):
 #                 break
 #             answer = await agent.chat_async(question)
 #             print("\n>>> Assistant reply:\n", answer)
-
 #     asyncio.run(_demo())
