@@ -142,6 +142,12 @@ COSMOSDB_CONTAINER_NAME="state_store"
 - **Fill in the Cosmos variables** ➜ the app automatically switches to an Azure Cosmos DB container with a hierarchical partition-key (`/tenant_id + /id`) so chat history survives restarts and scales across instances.  
   
 > If neither `COSMOSDB_KEY` nor the AAD credential set is provided, the code silently falls back to the in-memory store.  
+> **Important:**    
+> If you choose Cosmos DB and use Azure AD service-principal authentication, you must grant the service principal a custom role for data plane (read/write) access in Cosmos DB.    
+> See: [Grant data plane access using custom roles in Azure Cosmos DB](https://learn.microsoft.com/en-us/azure/cosmos-db/nosql/how-to-grant-data-plane-access?tabs=custom-definition%2Ccsharp&pivots=azure-interface-cli)  
+>  
+> Without this role, the application will not be able to access or persist chat history in Cosmos DB using Azure AD authentication.  
+
 #### Make sure your Azure resources are configured to use the correct model deployment names, endpoints, and API versions.  
   
 ---  

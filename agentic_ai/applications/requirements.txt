@@ -5,8 +5,8 @@ tenacity==8.5.0
 openai==1.77.0  
 flasgger==0.9.7.1  
 fastmcp==2.7.1  
-autogen-ext[mcp]==0.6.4  
-autogen-agentchat==0.6.4  
+autogen-ext[mcp]==0.7.1  
+autogen-agentchat==0.7.1 
 uvicorn==0.34.3  
 fastapi==0.115.12  
 streamlit==1.45.0  

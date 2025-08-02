@@ -15,8 +15,8 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # Copy the current directory contents into the container at /app  
 COPY . /app/  
   
-# Expose port 5000  
-EXPOSE 5000  
+# Expose port 8000 for the MCP service  
+EXPOSE 8000  
   
 # Run the Flask app with the host set to 0.0.0.0  
 CMD ["python", "mcp_service.py"]  

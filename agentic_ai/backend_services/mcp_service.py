@@ -12,9 +12,10 @@ mcp = FastMCP(
         "All customer, billing and knowledge data isaccessible ONLY via the declared "  
         "tools below.  Return values follow the pydanticschemas.  Always call the most "  
         "specific tool that answers the user’s question."  
-    ),  
-)  
-  
+    )
+) 
+# ─────────────────────────── CORS CONFIGURATION ─────────────────────────  
+
 # ─────────────────────────────  ENV & EMBEDDINGS  ───────────────────────  
 load_dotenv()  
 DB_PATH = os.getenv("DB_PATH", "data/contoso.db")  
@@ -598,4 +599,4 @@ def get_billing_summary(params: CustomerIdParam) -> Dict[str, Any]:
 #                                RUN SERVER                                  #  
 ##############################################################################  
 if __name__ == "__main__":  
-    asyncio.run(mcp.run_streamable_http_async(host="0.0.0.0", port=8000))  
+    asyncio.run(mcp.run_http_async(host="0.0.0.0", port=8000))  
