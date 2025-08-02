@@ -9,7 +9,10 @@ from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from autogen_ext.tools.mcp import StreamableHttpServerParams, mcp_server_tools  
 from agents.base_agent import BaseAgent    
 import threading, asyncio, uuid
-from datetime import datetime  
+from datetime import datetime,timezone  
+
+from autogen_core.model_context import BufferedChatCompletionContext
+
 import json
 
 from autogen_core.models import FunctionExecutionResult, FunctionExecutionResultMessage
@@ -31,7 +34,7 @@ async def activate_new_line(customer_id: str, phone_number: str) -> str:
     """
     Handle the activation of a new line for a customer.
 
-    The operation is long-running (~20 s).  
+    The operation is long-running (a few minutes).  
     Immediately acknowledge that the task was scheduled; the customer will be
     notified once activation is complete.
     """
@@ -138,7 +141,7 @@ async def _activate_new_line_impl(
     # Immediate (first) response shown to the user
     return (
         "🔔 Background task scheduled. "
-        "Activation will take ~20 s; you will be notified once it is done."
+        "Activation will take a few minutes; you will be notified once it is done."
     )
 # ---------------------------------------------------------------------------
 class Agent(BaseAgent):  
@@ -185,10 +188,12 @@ class Agent(BaseAgent):
             model=self.openai_model_name,  
         )  
   
-        # Set up the assistant agent  
+        # Set up the assistant agent
+        model_context = BufferedChatCompletionContext(buffer_size=10)  
         agent = AssistantAgent(  
             name="ai_assistant",  
             model_client=model_client,  
+            model_context=model_context,
             tools=tools,  
             system_message=(  
                 "You are a helpful assistant. You can use multiple tools to find information and answer questions. "  
@@ -200,7 +205,7 @@ class Agent(BaseAgent):
         # Set the termination condition: stop when agent answers as itself  
         termination_condition = TextMessageTermination("ai_assistant")  
   
-        self.loop_agent = RoundRobinGroupChat(  
+        self.loop_agent = RoundRobinGroupChat( 
             [agent],  
             termination_condition=termination_condition,  
         )  
