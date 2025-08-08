@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 from agents.base_agent import BaseAgent
 from semantic_kernel.agents import ChatCompletionAgent, ChatHistoryAgentThread
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
@@ -13,10 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 class Agent(BaseAgent):
-    def __init__(self, state_store, session_id) -> None:
+    def __init__(self, state_store, session_id, access_token: Optional[str] = None) -> None:
         super().__init__(state_store, session_id)
         self._agent = None
         self._initialized = False
+        self._access_token = access_token
 
     async def _setup_agent(self) -> None:
         """Initialize the assistant and tools only once."""
@@ -24,12 +26,18 @@ class Agent(BaseAgent):
             return
 
         # Set up the SSE plugin for the MCP service.
+        headers = {"Content-Type": "application/json"}
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+            # Some gateways are picky; explicitly advertise stream accept
+            headers.setdefault("Accept", "text/event-stream, application/json")
+
         contoso_plugin = MCPStreamableHttpPlugin(
             name="ContosoMCP",
             description="Contoso MCP Plugin",
             url=self.mcp_server_uri,
-            headers={"Content-Type": "application/json"},
-            timeout=30,
+            headers=headers,
+            timeout=60,
         )
         # Open the SSE connection so tools/prompts are loaded
         await contoso_plugin.connect()

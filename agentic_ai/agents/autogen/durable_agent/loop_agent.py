@@ -10,22 +10,16 @@ from autogen_ext.tools.mcp import StreamableHttpServerParams, mcp_server_tools
 from agents.base_agent import BaseAgent    
 import threading, asyncio, uuid
 from datetime import datetime,timezone  
-
 from autogen_core.model_context import BufferedChatCompletionContext
-
 import json
 
-from autogen_core.models import FunctionExecutionResult, FunctionExecutionResultMessage
 load_dotenv()  
 
 # NEW imports
 import asyncio, threading, time
 from typing import Any, Dict
 
-from autogen_core.models import (
-    FunctionExecutionResult,
-    FunctionExecutionResultMessage,
-)
+
 
 # ---------------------------------------------------------------------
 # 1.  User-visible tool (LLM will call this)
