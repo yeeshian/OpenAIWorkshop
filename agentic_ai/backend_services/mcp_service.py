@@ -1,23 +1,93 @@
 from fastmcp import FastMCP  
+from fastmcp.server.middleware import Middleware, MiddlewareContext  # added
 from typing import List, Optional, Dict, Any  
 from pydantic import BaseModel, Field  
 import sqlite3, os, json, math, asyncio, logging  
 from datetime import datetime  
 from dotenv import load_dotenv  
-  
+from fastmcp.server.auth.providers.jwt import JWTVerifier  # type: ignore
+from fastmcp.server.middleware import Middleware, MiddlewareContext 
+from fastmcp.server.dependencies import get_access_token 
+from fastmcp.exceptions import ToolError
+logging.basicConfig(level=logging.DEBUG) 
+logging.getLogger("fastmcp.server.auth.providers.jwt").setLevel(logging.ERROR)
+
+
+
+load_dotenv()  
+
 # ────────────────────────── FastMCP INITIALISATION ──────────────────────  
+# Configure JWT verification using Entra ID (issuer, audience, JWKS)
+AAD_TENANT = os.getenv("AAD_TENANT_ID")
+MCP_AUDIENCE = os.getenv("MCP_API_AUDIENCE") 
+_jwks_uri = (
+    f"https://login.microsoftonline.com/{AAD_TENANT}/.well-known/openid-configuration" if AAD_TENANT else None
+)
+_auth = None
+if _jwks_uri and AAD_TENANT and MCP_AUDIENCE:
+    try:
+        _auth = JWTVerifier(
+            jwks_uri=_jwks_uri,
+            issuer=None,  # skip issuer check
+            audience=None,  # skip audience check
+            algorithm="RS256",
+        )
+
+    except Exception as e:  # pragma: no cover
+        logging.exception(f"Failed to create JWTVerifier {str(e)}")
+        _auth = None
+from fastmcp.server.auth import TokenVerifier, AccessToken  
+import jwt  # PyJWT  
+  
+  
+class PassthroughTokenVerifier(TokenVerifier):  
+    async def verify_token(self, token: str) -> AccessToken | None:  
+        try:  
+            # Decode without signature validation; also skip exp check so you can inspect  
+            claims = jwt.decode(  
+                token,  
+                options={"verify_signature": False, "verify_exp": False},  
+                algorithms=["RS256", "HS256", "ES256"],  # avoids warnings  
+            )  
+  
+            # Extract "scopes" similar to JWTVerifier logic  
+            scopes: list[str] = []  
+            if isinstance(claims.get("scp"), str):  
+                scopes = claims["scp"].split()  
+            elif isinstance(claims.get("scope"), str):  
+                scopes = claims["scope"].split()  
+  
+            # Optional: also merge AAD application roles into scopes for testing  
+            if isinstance(claims.get("roles"), list):  
+                scopes += claims["roles"]  
+  
+            client_id = str(  
+                claims.get("sub") or claims.get("client_id") or "unknown"  
+            )  
+  
+            return AccessToken(  
+                token=token,  
+                client_id=client_id,  
+                scopes=scopes,  
+                expires_at=claims.get("exp"),  
+                claims=claims,  
+            )  
+  
+        except Exception:  
+            # If decoding fails, deny  
+            return None  
 mcp = FastMCP(  
     name="Contoso Customer API as Tools",  
     instructions=(  
         "All customer, billing and knowledge data isaccessible ONLY via the declared "  
         "tools below.  Return values follow the pydanticschemas.  Always call the most "  
         "specific tool that answers the user’s question."  
-    )
+    ),
+    auth=PassthroughTokenVerifier(),  # None if env not set or provider missing (manual validation path)
 ) 
 # ─────────────────────────── CORS CONFIGURATION ─────────────────────────  
 
 # ─────────────────────────────  ENV & EMBEDDINGS  ───────────────────────  
-load_dotenv()  
 DB_PATH = os.getenv("DB_PATH", "data/contoso.db")  
   
 def get_db() -> sqlite3.Connection:  
@@ -201,6 +271,67 @@ class InvoiceIdParam(BaseModel):
     invoice_id: int  
   
   
+# Normalized scope helpers
+SECURITY_ROLE = os.getenv("SECURITY_ROLE", "security")
+QUERY_ROLE = os.getenv("QUERY_ROLE", "query")
+
+
+ALLOWED_TENANTS = {t.strip() for t in os.getenv("ALLOWED_TENANTS", (AAD_TENANT or "")).split(",") if t.strip()}
+
+RESTRICTED_TOOLS_REQUIRING_ACCOUNT_SCOPE = {"unlock_account"}  
+  
+  
+  
+  
+class AuthZMiddleware(Middleware):  
+  
+    async def on_list_tools(self, context: MiddlewareContext, call_next):  
+        tools = await call_next(context)  
+  
+        # If there isn't an access token yet (shouldn't happen with auth enabled),  
+        # just return the full set.  
+        token = get_access_token()  
+        if token is None:  
+            return tools  
+        roles = token.claims["roles"]
+
+        # If the caller has security role, show everything.  
+        if SECURITY_ROLE in roles:  
+            return tools  
+  
+        # Otherwise, hide tools that require account scope.  
+        filtered = [  
+            t for t in tools  
+            if t.key not in RESTRICTED_TOOLS_REQUIRING_ACCOUNT_SCOPE  
+        ]  
+        return filtered  
+  
+    async def on_call_tool(self, context: MiddlewareContext, call_next):  
+        token = get_access_token()  
+  
+        # With FastMCP auth enabled, missing/invalid tokens are blocked before this point.  
+        if token is None:  
+            # pass
+            raise ToolError("Authentication required")  
+        roles = token.claims["roles"]
+        tool_name = context.message.name  
+  
+        # If the caller has account-management scope, allow all tools.  
+        if SECURITY_ROLE in roles:    
+            return await call_next(context)  
+  
+        # If they don't have account-management scope, block restricted tools.  
+        if tool_name in RESTRICTED_TOOLS_REQUIRING_ACCOUNT_SCOPE:  
+            raise ToolError(  
+                f"Insufficient authorization to call '{tool_name}'. "  
+                f"Requires '{SECURITY_ROLE}'."  
+            )  
+  
+        # All other tools are allowed (including billing-only callers).  
+        return await call_next(context) 
+# Register middleware
+mcp.add_middleware(AuthZMiddleware())
+
 ##############################################################################  
 #                               TOOL ENDPOINTS                               #  
 ##############################################################################  

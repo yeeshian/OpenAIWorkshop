@@ -17,8 +17,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel  
 from dotenv import load_dotenv  
 from fastapi import Depends, Header, HTTPException  
-import msal, jwt, requests  
-from jwt import PyJWKClient, decode as jwt_decode  
+import msal, requests  # removed jwt related imports
 
 
 # ------------------------------------------------------------------  
@@ -31,7 +30,7 @@ AAD_TENANT_ID = os.getenv("AAD_TENANT_ID") or os.getenv("TENANT_ID")
 if not AAD_TENANT_ID:
     raise RuntimeError("AAD_TENANT_ID (or TENANT_ID) must be set.")
 
-# Audience should be the App ID URI of the MCP API you're protecting via APIM, e.g. "api://<mcp-api-app-id>"
+# Audience should be the App ID URI of the MCP API you're protecting via APIM, e.g., "api://<mcp-api-app-id>"
 EXPECTED_AUDIENCE = (
     os.getenv("MCP_API_AUDIENCE")
     or os.getenv("API_AUDIENCE")
@@ -40,35 +39,17 @@ EXPECTED_AUDIENCE = (
 if not EXPECTED_AUDIENCE:
     raise RuntimeError("Set MCP_API_AUDIENCE (e.g., api://<mcp-api-app-id>) for JWT validation.")
 
-JWKS_URL = f"https://login.microsoftonline.com/{AAD_TENANT_ID}/discovery/v2.0/keys"
-jwks_client = PyJWKClient(JWKS_URL)
+# Remove JWKS client (no backend validation now)
+# JWKS_URL and jwks_client no longer needed
 
 
-def verify_token(auth: str = Header(...)):
-    if not auth or not auth.startswith("Bearer "):
+# Map the standard Authorization header and avoid 422 by making it optional, then return 401 if missing
+
+def verify_token(authorization: str | None = Header(None, alias="Authorization")):
+    # Minimal check: ensure bearer token present; delegate validation & scopes to MCP/APIM backend.
+    if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "No bearer token")
-    token = auth.split(" ", 1)[1]
-    try:
-        signing_key = jwks_client.get_signing_key_from_jwt(token).key
-        decoded = jwt_decode(
-            token,
-            signing_key,
-            algorithms=["RS256"],
-            audience=EXPECTED_AUDIENCE,
-            options={"verify_exp": True},
-        )
-        required_scope = os.getenv("REQUIRED_SCOPE")  # optional, e.g. "contoso.mcp.fullaccess"
-        if required_scope:
-            scp = decoded.get("scp") or ""
-            roles = decoded.get("roles") or []
-            scopes = scp.split() if isinstance(scp, str) else scp
-            has_scope = required_scope in scopes
-            has_role = isinstance(roles, list) and required_scope in roles
-            if not (has_scope or has_role):
-                raise HTTPException(403, "Insufficient scope")
-        return token  # pass-through original string
-    except Exception as ex:
-        raise HTTPException(401, f"Token invalid: {ex}")
+    return authorization.split(" ", 1)[1]
 
 # ------------------------------------------------------------------  
 # Bring project root onto the path & load your agent dynamically  
@@ -125,7 +106,7 @@ async def reset_session(req: SessionResetRequest, token: str = Depends(verify_to
     hist_key = f"{req.session_id}_chat_history"  
     if hist_key in STATE_STORE:  
         del STATE_STORE[hist_key]  
-  
+   
 
 @app.get("/history/{session_id}", response_model=ConversationHistoryResponse)  
 async def get_conversation_history(session_id: str, token: str = Depends(verify_token)):  

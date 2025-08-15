@@ -139,19 +139,24 @@ async def _activate_new_line_impl(
     )
 # ---------------------------------------------------------------------------
 class Agent(BaseAgent):  
-    def __init__(self, state_store, session_id) -> None:  
+    def __init__(self, state_store, session_id, access_token: str | None = None) -> None:  
         super().__init__(state_store, session_id)  
         self.loop_agent = None  
         self._initialized = False  
+        self._access_token = access_token
   
     async def _setup_loop_agent(self) -> None:  
         """Initialize the assistant and tools once."""  
         if self._initialized:  
             return  
   
+        headers = {"Content-Type": "application/json"}
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+  
         server_params = StreamableHttpServerParams(  
             url=self.mcp_server_uri,  
-            headers={"Content-Type": "application/json"},  
+            headers=headers,  
             timeout=30  
         )  
   
@@ -226,4 +231,4 @@ class Agent(BaseAgent):
         print(f"Updated state for session {self.session_id}: {new_state}")
         self._setstate(new_state)  
   
-        return assistant_response  
+        return assistant_response

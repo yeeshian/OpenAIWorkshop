@@ -1,78 +1,27 @@
-<?xml version="1.0" encoding="utf-8"?>  
-<policies>  
-  <!-- Inbound: CORS + JWT validation + extract oid -->  
-  <inbound>  
-    <base />  
-  
-    <!-- 1. CORS (for the Streamlit SPA) -->  
-    <cors allow-credentials="true">  
-      <allowed-origins>  
-        <origin>http://localhost:8501</origin>  
-        <!-- Add your deployed frontend origin(s) here -->  
-      </allowed-origins>  
-      <allowed-methods preflight-result-max-age="300">  
-        <method>GET</method>  
-        <method>POST</method>  
-        <method>OPTIONS</method>  
-      </allowed-methods>  
-      <allowed-headers>  
-        <header>*</header>  
-      </allowed-headers>  
-      <expose-headers>  
-        <header>Content-Type</header>  
-        <header>Cache-Control</header>  
-      </expose-headers>  
-    </cors>  
-  
-    <!-- 2. Validate incoming JWT and stash it in "jwt" -->  
-    <validate-jwt  
-      header-name="Authorization"  
-      require-scheme="Bearer"  
-      failed-validation-httpcode="401"  
-      failed-validation-error-message="Unauthorized"  
-      output-token-variable-name="jwt">  
-      <openid-config url="https://login.microsoftonline.com/{{aad-tenant-id}}/v2.0/.well-known/openid-configuration" />  
-      <audiences>  
-        <audience>{{mcp-app-id-uri}}</audience>  
-      </audiences>  
-      <required-claims>  
-        <claim name="scp" match="any">  
-          <value>{{required-scope}}</value>  
-        </claim>  
-      </required-claims>  
-    </validate-jwt>  
-  
-    <!-- 3. Extract the "oid" claim from the validated JWT -->  
-    <set-header name="X-Principal-Id" exists-action="override">  
-      <value>  
-        @(  
-          (context.Variables["jwt"] as dynamic)?  
-            .Claims?  
-            .FirstOrDefault(c => (string)c.Type == "oid")?  
-            .Value  
-          ?? ""  
-        )  
-      </value>  
-    </set-header>  
-  
-    <!-- 4. Forward Authorization to backend/MCP if calling a downstream API -->  
-    <set-header name="Authorization" exists-action="override">  
-      <value>@(context.Request.Headers.GetValueOrDefault("Authorization", string.Empty))</value>  
-    </set-header>  
-  </inbound>  
-  
-  <!-- Backend: simply forward to your actual service -->  
-  <backend>  
-    <base />  
-  </backend>  
-  
-  <!-- Outbound: no modifications -->  
-  <outbound>  
-    <base />  
-  </outbound>  
-  
-  <!-- On-error: default behavior -->  
-  <on-error>  
-    <base />  
-  </on-error>  
+<policies>
+    <inbound>
+        <base />
+        <validate-jwt header-name="Authorization" failed-validation-httpcode="401" require-scheme="Bearer">
+            <openid-config url="https://login.microsoftonline.com/0fbe7234-45ea-498b-b7e4-1a8b2d3be4d9/v2.0/.well-known/openid-configuration" />
+            <required-claims>
+                <claim name="aud">
+                    <value>3fbff695-0120-4e96-b836-65c33be3171b</value>
+                </claim>
+                <claim name="tid" match="any">
+                    <value>0fbe7234-45ea-498b-b7e4-1a8b2d3be4d9</value>
+                    <value>11111111-2222-3333-4444-555555555555</value>
+                    <value>66666666-7777-8888-9999-AAAAAAAAAAAA</value>
+                </claim>
+            </required-claims>
+        </validate-jwt>
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
 </policies>

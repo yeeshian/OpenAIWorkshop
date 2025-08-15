@@ -12,19 +12,27 @@ from agents.base_agent import BaseAgent
 load_dotenv()  
   
 class Agent(BaseAgent):  
-    def __init__(self, state_store, session_id) -> None:  
+    def __init__(self, state_store, session_id, access_token: str | None = None) -> None:  
         super().__init__(state_store, session_id)  
         self.loop_agent = None  
         self._initialized = False  
+        self._access_token = access_token  
   
     async def _setup_loop_agent(self) -> None:  
         """Initialize the assistant and tools once."""  
         if self._initialized:  
             return  
   
+        # Build headers, include Bearer if provided from backend
+        headers = {"Content-Type": "application/json"}
+        if self._access_token:
+            print("access token ", self._access_token)
+            headers["Authorization"] = f"Bearer {self._access_token}"
+    
+  
         server_params = StreamableHttpServerParams(  
             url=self.mcp_server_uri,  
-            headers={"Content-Type": "application/json"},  
+            headers=headers,  
             timeout=30  
         )  
   
@@ -48,7 +56,8 @@ class Agent(BaseAgent):
             system_message=(  
                 "You are a helpful assistant. You can use multiple tools to find information and answer questions. "  
                 "Review the tools available to you and use them as needed. You can also ask clarifying questions if "  
-                "the user is not clear."  
+                "the user is not clear. If customer ask any operations that there's no tool to support, said that you cannot do it. "
+                "Never hallunicate any operation that you do not actually do."  
             )  
         )  
   
@@ -82,4 +91,4 @@ class Agent(BaseAgent):
         print(f"Updated state for session {self.session_id}: {new_state}")
         self._setstate(new_state)  
   
-        return assistant_response  
+        return assistant_response
