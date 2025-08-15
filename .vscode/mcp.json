@@ -1,0 +1,9 @@
+{
+	"servers": {
+		"mcp-contoso-auth": {
+			"url": "https://apimmcp001.azure-api.net/contoso-mcp/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

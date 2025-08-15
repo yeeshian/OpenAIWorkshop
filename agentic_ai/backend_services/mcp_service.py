@@ -21,61 +21,21 @@ load_dotenv()
 AAD_TENANT = os.getenv("AAD_TENANT_ID")
 MCP_AUDIENCE = os.getenv("MCP_API_AUDIENCE") 
 _jwks_uri = (
-    f"https://login.microsoftonline.com/{AAD_TENANT}/.well-known/openid-configuration" if AAD_TENANT else None
+    f"https://login.microsoftonline.com/{AAD_TENANT}/v2.0/.well-known/openid-configuration" if AAD_TENANT else None
 )
+
 _auth = None
 if _jwks_uri and AAD_TENANT and MCP_AUDIENCE:
     try:
         _auth = JWTVerifier(
             jwks_uri=_jwks_uri,
-            issuer=None,  # skip issuer check
-            audience=None,  # skip audience check
-            algorithm="RS256",
+            issuer=f"https://login.microsoftonline.com/{AAD_TENANT}/v2.0",
+            audience=MCP_AUDIENCE,
         )
-
     except Exception as e:  # pragma: no cover
         logging.exception(f"Failed to create JWTVerifier {str(e)}")
         _auth = None
-from fastmcp.server.auth import TokenVerifier, AccessToken  
-import jwt  # PyJWT  
-  
-  
-class PassthroughTokenVerifier(TokenVerifier):  
-    async def verify_token(self, token: str) -> AccessToken | None:  
-        try:  
-            # Decode without signature validation; also skip exp check so you can inspect  
-            claims = jwt.decode(  
-                token,  
-                options={"verify_signature": False, "verify_exp": False},  
-                algorithms=["RS256", "HS256", "ES256"],  # avoids warnings  
-            )  
-  
-            # Extract "scopes" similar to JWTVerifier logic  
-            scopes: list[str] = []  
-            if isinstance(claims.get("scp"), str):  
-                scopes = claims["scp"].split()  
-            elif isinstance(claims.get("scope"), str):  
-                scopes = claims["scope"].split()  
-  
-            # Optional: also merge AAD application roles into scopes for testing  
-            if isinstance(claims.get("roles"), list):  
-                scopes += claims["roles"]  
-  
-            client_id = str(  
-                claims.get("sub") or claims.get("client_id") or "unknown"  
-            )  
-  
-            return AccessToken(  
-                token=token,  
-                client_id=client_id,  
-                scopes=scopes,  
-                expires_at=claims.get("exp"),  
-                claims=claims,  
-            )  
-  
-        except Exception:  
-            # If decoding fails, deny  
-            return None  
+
 mcp = FastMCP(  
     name="Contoso Customer API as Tools",  
     instructions=(  
@@ -83,7 +43,7 @@ mcp = FastMCP(
         "tools below.  Return values follow the pydanticschemas.  Always call the most "  
         "specific tool that answers the user’s question."  
     ),
-    auth=PassthroughTokenVerifier(),  # None if env not set or provider missing (manual validation path)
+    auth=_auth,  # None if env not set or provider missing (manual validation path)
 ) 
 # ─────────────────────────── CORS CONFIGURATION ─────────────────────────  
 
