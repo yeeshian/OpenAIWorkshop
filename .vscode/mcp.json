@@ -1,7 +1,8 @@
 {
 	"servers": {
-		"mcp-contoso-auth": {
-			"url": "https://apimmcp001.azure-api.net/contoso-mcp/mcp",
+		
+		"local-mcp": {
+			"url": "http://localhost:8000/mcp",
 			"type": "http"
 		}
 	},
