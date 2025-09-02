@@ -6,7 +6,7 @@ LOCATION="westus" # Choose your preferred Azure region
 CONTAINER_REGISTRY="mcpbackendregistry"  
 CONTAINER_ENVIRONMENT="mcp-backend-env"  
 IMAGE_NAME="mcp-backend:latest"  
-APP_NAME="mcp-backend-service"  
+APP_NAME="mcp-backend-service-agentic"  
 APP_PORT=8000  
   
 # Create resource group  
@@ -22,7 +22,7 @@ az acr update -n $CONTAINER_REGISTRY --admin-enabled true  --resource-group $RES
 az acr login --name $CONTAINER_REGISTRY  --resource-group $RESOURCE_GROUP  
   
 # Build and push the Docker image to ACR  
-az acr build --registry $CONTAINER_REGISTRY --image $IMAGE_NAME --file ./Dockerfile.mcp .  --resource-group $RESOURCE_GROUP  
+az acr build --registry $CONTAINER_REGISTRY --image $IMAGE_NAME --file ./Dockerfile_agentic.mcp .  --resource-group $RESOURCE_GROUP  
   
 # Create the Container App environment  
 az containerapp env create --name $CONTAINER_ENVIRONMENT --resource-group $RESOURCE_GROUP --location $LOCATION  

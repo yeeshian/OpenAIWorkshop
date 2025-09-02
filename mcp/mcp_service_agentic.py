@@ -28,7 +28,86 @@ from contoso_tools import (
 # AUTOGEN WRAPPER FUNCTIONS
 # ========================================================================
 # These functions wrap the async functions from contoso_tools to work with AutoGen
-
+# --- Additional customer service / billing-related wrappers ---  
+  
+async def get_all_customers() -> str:  
+    """List all customers with basic info."""  
+    try:  
+        customers = await get_all_customers_async()  
+        if not customers:  
+            return "No customers found."  
+        result = "Customer list:\n"  
+        for c in customers:  
+            result += f"- {c['customer_id']}: {c['first_name']} {c['last_name']} ({c['email']}) - Loyalty: {c['loyalty_level']}\n"  
+        return result  
+    except Exception as e:  
+        return f"Error retrieving customers: {str(e)}"  
+  
+async def get_customer_orders(customer_id: int) -> str:  
+    """List all orders placed by a customer."""  
+    try:  
+        orders = await get_customer_orders_async(customer_id)  
+        if not orders:  
+            return f"No orders found for customer {customer_id}"  
+        result = f"Orders for customer {customer_id}:\n"  
+        for o in orders:  
+            result += f"- Order {o['order_id']} on {o['order_date']}: {o['product_name']} (${o['amount']:.2f}) [{o['order_status']}]\n"  
+        return result  
+    except Exception as e:  
+        return f"Error retrieving orders for customer {customer_id}: {str(e)}"  
+  
+async def get_subscription_detail(subscription_id: int) -> str:  
+    """Get detailed subscription info."""  
+    try:  
+        sub = await get_subscription_detail_async(subscription_id)  
+        result = f"Subscription {subscription_id} ({sub['product_name']}):\nStatus: {sub['status']}\n"  
+        result += f"Invoices: {len(sub['invoices'])}, Incidents: {len(sub['service_incidents'])}\n"  
+        return result  
+    except Exception as e:  
+        return f"Error retrieving subscription {subscription_id}: {str(e)}"  
+  
+async def update_subscription(subscription_id: int, updates: dict) -> str:  
+    """Update subscription fields."""  
+    try:  
+        res = await update_subscription_async(subscription_id, updates)  
+        return f"Subscription {subscription_id} updated: {', '.join(res['updated_fields'])}"  
+    except Exception as e:  
+        return f"Error updating subscription {subscription_id}: {str(e)}"  
+  
+async def get_data_usage(subscription_id: int, start_date: str, end_date: str, aggregate: bool=False) -> str:  
+    """Get subscription data usage."""  
+    try:  
+        usage = await get_data_usage_async(subscription_id, start_date, end_date, aggregate)  
+        if aggregate:  
+            return f"Total usage: {usage['total_mb']} MB, {usage['total_voice_minutes']} mins, {usage['total_sms']} SMS"  
+        else:  
+            result = "Daily usage:\n"  
+            for u in usage:  
+                result += f"{u['usage_date']}: {u['data_used_mb']} MB, {u['voice_minutes']} mins, {u['sms_count']} SMS\n"  
+            return result  
+    except Exception as e:  
+        return f"Error retrieving usage: {str(e)}"  
+  
+async def get_support_tickets(customer_id: int, open_only: bool=False) -> str:  
+    """Get support tickets for a customer."""  
+    try:  
+        tickets = await get_support_tickets_async(customer_id, open_only)  
+        if not tickets:  
+            return f"No {'open ' if open_only else ''}tickets for customer {customer_id}"  
+        result = f"Support tickets for customer {customer_id}:\n"  
+        for t in tickets:  
+            result += f"- Ticket {t['ticket_id']} ({t['status']}): {t['subject']}\n"  
+        return result  
+    except Exception as e:  
+        return f"Error retrieving tickets: {str(e)}"  
+  
+async def create_support_ticket(customer_id: int, subscription_id: int, category: str, priority: str, subject: str, description: str) -> str:  
+    """Create a new support ticket."""  
+    try:  
+        t = await create_support_ticket_async(customer_id, subscription_id, category, priority, subject, description)  
+        return f"Ticket {t['ticket_id']} created for customer {customer_id}."  
+    except Exception as e:  
+        return f"Error creating ticket: {str(e)}"  
 async def get_invoice_payments(invoice_id: int) -> str:
     """Get all payments made against a specific invoice. Returns payment history including amounts, dates, and status."""
     try:
@@ -267,16 +346,55 @@ class AgentRunResult:
 def load_domain_tools(domain: str) -> list[Any]:  
     try:  
         if domain == DOMAIN_BILLING:  
-            return [get_invoice_payments, pay_invoice, get_billing_summary]  
+            return [  
+                # Existing billing tools  
+                get_invoice_payments,  
+                pay_invoice,  
+                get_billing_summary,  
+  
+                get_all_customers,  
+                get_customer_info_func,  
+                get_customer_orders,  
+                get_subscription_detail,  
+                update_subscription,  
+                get_data_usage,  
+                get_support_tickets,  
+                create_support_ticket  
+            ]  
         elif domain == DOMAIN_ACCOUNT:  
-            return [unlock_account, get_security_logs]  
+            return [  
+                unlock_account,  
+                get_security_logs,
+                get_all_customers,  
+                get_customer_info_func,  
+                get_customer_orders,  
+                get_subscription_detail,  
+                update_subscription,  
+                get_data_usage,  
+                get_support_tickets,  
+                create_support_ticket  
+  
+            ]  
         elif domain == DOMAIN_PRODUCT:  
-            return [get_promotions, get_eligible_promotions, get_products, get_product_detail]  
+            return [  
+                get_promotions,  
+                get_eligible_promotions,  
+                get_products,  
+                get_product_detail,
+                get_all_customers,  
+                get_customer_info_func,  
+                get_customer_orders,  
+                get_subscription_detail,  
+                update_subscription,  
+                get_data_usage,  
+                get_support_tickets,  
+                create_support_ticket  
+  
+            ]  
         else:  
             return []  
     except Exception:  
-        return []  
-  
+        return []    
 # --- Domain Agent ---  
 class DomainAgent:  
     def __init__(self, domain: str, temperature: float = 0.2, model_name: str | None = OPENAI_MODEL_NAME):  
@@ -325,24 +443,38 @@ class DomainAgent:
 
     def _system_prompt_for(self) -> str:  
         shared_contract = (  
-            "You are a helpful assistant. You can use multiple tools to find information and answer questions. "
-            "Review the tools available to you and use them as needed. You can also ask clarifying questions if "
-            "the user is not clear. If customer ask any operations that there's no tool to support, said that you cannot do it. "
-            "Never hallucinate any operation that you do not actually do.\n"
-            "Interaction contract:\n"  
-            "- If you have a final answer, include a single line that starts with 'FINAL:'\n"  
-            "- Otherwise, ask exactly one targeted question.\n"  
-            "- Do not include 'FINAL:' unless you are done.\n"  
-            "- Keep messages concise.\n"  
+            "You are a helpful assistant. You can use multiple tools to find information and answer questions. "  
+            "Review the tools available to you and use them as needed. You can also ask clarifying questions if "  
+            "the user is not clear. "  
+            "Never hallucinate any operation that you do not actually do.\n"  
         )  
+    
         if self.domain == DOMAIN_BILLING:  
-            return "You are an expert assistant for invoice and payment issues.\n" + shared_contract  
+            return (  
+                "You are an expert assistant for all customer account and billing-related matters. "  
+                "You can handle invoices, payments, billing summaries, customer profile lookups, subscription details and updates, "  
+                "order history, data usage reports, and support ticket creation or retrieval. "  
+                "You can answer questions that combine any of these areas.\n"  
+                + shared_contract  
+            )  
+    
         if self.domain == DOMAIN_ACCOUNT:  
-            return "You are an expert in account access issues.\n" + shared_contract  
+            return (  
+                "You are an expert in account access and security issues. "  
+                "You can unlock locked accounts, review and explain recent security logs, "  
+                "and assist with account-related security events.\n"  
+                + shared_contract  
+            )  
+    
         if self.domain == DOMAIN_PRODUCT:  
-            return "You are an expert on product catalog and promotions.\n" + shared_contract  
-        return "You are a helpful domain expert.\n" + shared_contract
-
+            return (  
+                "You are an expert on the product catalog and promotions. "  
+                "You can list available products, filter by category, retrieve product details, "  
+                "and find promotions (including those that a specific customer is eligible for) based on loyalty level and dates.\n"  
+                + shared_contract  
+            )  
+    
+        return "You are a helpful domain expert.\n" + shared_contract  
     def _parse_status(self, assistant_text: str) -> tuple[str, Any | None]:  
         for ln in assistant_text.splitlines():  
             s = ln.strip()  
@@ -435,7 +567,7 @@ async def _register_session_cleanup(ctx: Context) -> None:
     except Exception:  
         pass  
   
-async def _run_domain_tool(*, ctx: Context, domain: str, input: str, max_steps: int | None, temperature: float | None, model_name: str | None) -> dict:  
+async def _run_domain_tool(*, ctx: Context, domain: str, input: str) -> dict:  
     await _register_session_cleanup(ctx)  
     session_id = ctx.session_id  
     lock = AGENTS.lock_for(session_id)  
@@ -443,10 +575,11 @@ async def _run_domain_tool(*, ctx: Context, domain: str, input: str, max_steps: 
         agent = AGENTS.get_or_create(  
             session_id=session_id,  
             domain=domain,  
-            temperature=temperature if temperature is not None else 0.2,  
-            model_name=model_name or OPENAI_MODEL_NAME,  
+            temperature=0.2,  
+            model_name=OPENAI_MODEL_NAME,  
         )  
-        result = await agent.run_turn(user_input=input, max_steps=max_steps or 6)
+        result = await agent.run_turn(user_input=input)
+        print("result ", result)
         
         # Save agent state for multi-turn conversation support
         if agent.state:
@@ -462,19 +595,19 @@ async def _run_domain_tool(*, ctx: Context, domain: str, input: str, max_steps: 
   
 # --- High-level tools ---  
 @server.tool(name="ask_billing_expert", description="Consult the billing/invoice/payment expert.", tags={"billing", "invoice", "payment"})  
-async def ask_billing_expert(input: str, max_steps: int | None = 6, temperature: float | None = 0.2, model_name: str | None = OPENAI_MODEL_NAME, ctx: Context | None = None) -> dict:  
+async def ask_billing_expert(input: str, ctx: Context | None = None) -> dict:  
     assert ctx is not None  
-    return await _run_domain_tool(ctx=ctx, domain=DOMAIN_BILLING, input=input, max_steps=max_steps, temperature=temperature, model_name=model_name)  
+    return await _run_domain_tool(ctx=ctx, domain=DOMAIN_BILLING, input=input)  
   
 @server.tool(name="ask_account_expert", description="Consult the account-access expert.", tags={"account", "login", "mfa"})  
-async def ask_account_expert(input: str, max_steps: int | None = 6, temperature: float | None = 0.2, model_name: str | None = OPENAI_MODEL_NAME, ctx: Context | None = None) -> dict:  
+async def ask_account_expert(input: str, ctx: Context | None = None) -> dict:  
     assert ctx is not None  
-    return await _run_domain_tool(ctx=ctx, domain=DOMAIN_ACCOUNT, input=input, max_steps=max_steps, temperature=temperature, model_name=model_name)  
+    return await _run_domain_tool(ctx=ctx, domain=DOMAIN_ACCOUNT, input=input)  
   
 @server.tool(name="ask_product_expert", description="Consult the product & promotions expert.", tags={"product", "promotions", "catalog"})  
-async def ask_product_expert(input: str, max_steps: int | None = 6, temperature: float | None = 0.2, model_name: str | None = OPENAI_MODEL_NAME, ctx: Context | None = None) -> dict:  
+async def ask_product_expert(input: str, ctx: Context | None = None) -> dict:  
     assert ctx is not None  
-    return await _run_domain_tool(ctx=ctx, domain=DOMAIN_PRODUCT, input=input, max_steps=max_steps, temperature=temperature, model_name=model_name)  
+    return await _run_domain_tool(ctx=ctx, domain=DOMAIN_PRODUCT, input=input)  
   
 # --- Entrypoint ---  
 if __name__ == "__main__":  
