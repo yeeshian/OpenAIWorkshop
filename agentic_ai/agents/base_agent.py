@@ -33,6 +33,13 @@ class BaseAgent:
     def append_to_chat_history(self, messages: List[Dict[str, str]]) -> None:  
         self.chat_history.extend(messages)  
         self.state_store[f"{self.session_id}_chat_history"] = self.chat_history  
+
+    def set_progress_sink(self, sink) -> None:
+        """
+        Sets a sink for progress updates.
+        The sink should be an async function that accepts a dictionary.
+        """
+        self.progress_sink = sink
   
     async def chat_async(self, prompt: str) -> str:  
         """  

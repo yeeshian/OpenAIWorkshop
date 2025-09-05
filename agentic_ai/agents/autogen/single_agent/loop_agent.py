@@ -26,7 +26,6 @@ class Agent(BaseAgent):
         # Build headers, include Bearer if provided from backend
         headers = {"Content-Type": "application/json"}
         if self._access_token:
-            print("access token ", self._access_token)
             headers["Authorization"] = f"Bearer {self._access_token}"
     
   
