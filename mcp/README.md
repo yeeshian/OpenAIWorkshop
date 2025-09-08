@@ -1,70 +1,161 @@
-This chapter explain about MCP design.
-talks about following topics:
-1. MCP Security: basic security and multi-tenant security with APIM integration
-2. Agentic MCP: intelligent MCP 
-3. Advanced features such as progress update 
-## MCP Server Architecture
-```mermaid
-flowchart TD  
-    %% Client
-    A[User / External Client] -->|HTTP Request| RAP
-    %% Auth Layer
-    subgraph Auth[Authentication Layer]
-        direction TB  
-        PAS[PassthroughJWTVerifier]  
-        JWT[JWTVerifier]  
-        RAP[RemoteAuthProvider]  
-        RAP --> PAS
-        RAP --> JWT
-    end
-    %% Middleware
-    subgraph MW[Middleware Layer]
-        AZ[AuthZMiddleware]
-    end
-    RAP --> AZ
-    %% Tools Grouped
-    subgraph Tools[Tool Endpoints]
-        direction TB
-        subgraph CustomerTools[Customer Management]
-            T1[get_all_customers]
-            T2[get_customer_detail]
-            T11[get_customer_orders]
-        end
+# MCP Design Guidance for Secure, Intelligent, and Advanced MCP Services  
   
-        subgraph SubscriptionTools[Subscription & Billing]
-            T3[get_subscription_detail]  
-            T4[get_invoice_payments]  
-            T5[pay_invoice]  
-            T6[get_data_usage]  
-            T16[update_subscription]
-            T18[get_billing_summary]
-        end
+## Overview  
+This repository illustrates how to design and operate production-grade MCP services that are:  
   
-        subgraph PromoTools[Promotions & Products]
-            T7[get_promotions]  
-            T8[get_eligible_promotions]  
-            T14[get_products]
-            T15[get_product_detail]  
-        end  
+- **Secure by default** and ready for multi-tenant exposure via Azure API Management (APIM).  
+- **Intelligent and agentic**, using Azure OpenAI and Autogen to orchestrate tool calls.  
+- **Advanced in user experience**, including long-running operations with live progress updates.  
   
-        subgraph SupportTools[Support & Security]
-            T10[get_security_logs]  
-            T12[get_support_tickets]  
-            T13[create_support_ticket]
-            T17[unlock_account]  
-        end  
+---  
   
-        subgraph KBTools[Knowledge Base]
-            T9[search_knowledge_base]  
-        end
-    end  
+## MCP Security: Basic Security and Multi‑Tenant Security with APIM Integration  
   
-    %% Data Layer  
-    subgraph Data[Data Layer]
-        DB[(Database / Async Data Sources)]  
-    end  
+### Goals  
+- Ensure any client (human or system) authenticates and authorizes correctly.  
+- Enforce defense-in-depth with a gateway (APIM) and the MCP backend.  
+- Support multi-tenant customers with clear tenant-to-backend routing and role-based access.  
   
-    %% Flow  
-    AZ --> Tools  
-    Tools -->|Fetch / Store Data| DB  
-```
+### Core Patterns Demonstrated  
+  
+#### Authentication on the MCP Server  
+- `RemoteAuthProvider` publishes OAuth-protected-resource metadata so clients discover how to authenticate.  
+- **Token verification options**:  
+  - `JWTVerifier` (**production**): Validates tokens with Entra ID (JWKS) and optional audience enforcement.  
+  - `PassthroughJWTVerifier` (**development**): Accepts any token so you can simulate roles/scopes locally.  
+  - `DISABLE_AUTH` (**development**): Turns off auth entirely.  
+- **OAuth discovery endpoint for clients**:    
+  `GET /mcp/.well-known/oauth-protected-resource` returns resource, auth servers, scopes.  
+  
+#### Authorization in the MCP Server  
+- `AuthZMiddleware` inspects `token.claims["roles"]` and applies fine-grained RBAC:  
+  - Restricted tools (e.g., `unlock_account`) require a specific role (`SECURITY_ROLE="security"` by default).  
+  - Tools are filtered on list and enforced on call, preventing accidental exposure.  
+  
+#### APIM as Security Gateway (Coarse-Grained Control)  
+- APIM `validate-jwt` policy verifies Bearer tokens from Entra ID.  
+- Requires audience and only allows specific tenant IDs (`tid`) per route.  
+- Performs tenant → backend mapping (e.g., `/contoso-mcp` → Contoso backend).  
+- Blocks disallowed tenants with **403** before traffic reaches the MCP server.  
+  
+---  
+  
+### Multi-Tenant Design Flow  
+*(Detailed in `MULTI_TENANT_MCP_SECURITY.md`)*  
+  
+1. A multi-tenant “frontend” app in your home tenant defines app roles.  
+2. Customer tenant admins consent and assign their users to roles in their Enterprise App.  
+3. The frontend acquires tokens (`aud = frontend app`) and calls APIM.  
+4. APIM validates tokens, checks `tid` mapping, and forwards to the correct MCP backend.  
+5. MCP backend re-validates, reads roles, and applies business rules (e.g., read-only vs privileged actions).  
+  
+#### Why This Matters  
+- **Two robust authorization layers**:  
+  - **At the edge (APIM)**: Tenant allow-listing and routing.  
+  - **In the app (MCP)**: Role-based tool exposure and enforcement.  
+- **Clean separation of concerns**:    
+  - Identity and coarse-grained access → Gateway    
+  - Business logic and fine-grained rules → MCP  
+  
+---  
+  
+## Agentic MCP: Intelligent MCP  
+  
+### Goals  
+- Move beyond “single tool calls” into expert, multi-step reasoning that uses the right tool(s) at the right time.  
+- Keep tools simple and auditable, but let agents orchestrate them to solve complex tasks.  
+  
+### Core Patterns Demonstrated  
+  
+#### Agentic Server Powered by Azure OpenAI + Autogen  
+- **Domain-specialized agents**:  
+  - Billing  
+  - Account/Security  
+  - Product/Promotions  
+- MCP tools such as `ask_billing_expert`, `ask_account_expert`, and `ask_product_expert` expose these agents via a simple question interface.  
+- Agents select and chain domain-appropriate tools (e.g., invoices, usage, promotions) to form end-to-end solutions.  
+- **State persistence per session** allows multi-turn flows (agent remembers context).  
+  
+#### Clear Boundary Between “Tools” and “Agents”  
+- **Tools**: Minimal, typed, map to specific business operations (queries and updates).  
+- **Agents**: Decide which tools to call, in what order, and when to ask clarifying questions.  
+  
+#### Enterprise-Friendly Data Layer  
+- Backed by deterministic, seeded SQLite DB with realistic tables:  
+  - Customers, subscriptions, invoices, payments, support tickets, usage, promotions, incidents, security logs, knowledge base.  
+- Knowledge base search uses embeddings (with zero-vector fallback if Azure OpenAI credentials aren’t available).  
+  
+#### Why This Matters  
+- Preserves operational clarity (tools) while adding intelligent orchestration (agents).  
+- Extends cleanly to more domains—just add tools and a domain agent.  
+  
+---  
+  
+## Advanced MCP Features: Progress Updates with Agent Integration  
+  
+### Goals  
+- Provide great UX and trust signals during long-running tasks.  
+- Allow clients (UI or systems) to present real-time progress and partial status.  
+  
+### Core Patterns Demonstrated  
+  
+#### Long-Running Tool with Progress  
+- Example: `trouble_shoot_device` emits progress via    
+  `ctx.report_progress(progress, total, message)`    
+  as it runs through multiple steps (~45s).  
+- Integrates with agent flows—agents can call such tools and surface progress to clients.  
+  
+#### Stream-Friendly Server Middlewares (Agentic Server)  
+- Logging, timing, and error-handling middleware make operations observable without overwhelming logs.  
+- Works with streaming transports (e.g., SSE) so UIs can reflect progress live.  
+  
+#### Typed Interfaces and Consistent Contracts  
+- All tools use explicit schemas (Pydantic models) for inputs and outputs.  
+- Agents and clients can rely on predictable structures for rendering and automation.  
+  
+#### Why This Matters  
+- Users remain informed during complex tasks (diagnostics, data sync, batch updates).  
+- Improves perceived performance and reduces support burden.  
+  
+---  
+  
+## How These Patterns Map to This Repository  
+  
+### Security & Multi-Tenant  
+- **MCP tools server**: `mcp_service.py`    
+  (`RemoteAuthProvider`, `JWTVerifier`/`Passthrough`, `AuthZMiddleware`, OAuth metadata route)  
+- **APIM policy**: `apim_inbound_policy.xml` (audience, tenant allow-list)  
+- **Design doc**: [`MULTI_TENANT_MCP_SECURITY.md`](./mcp/MULTI_TENANT_MCP_SECURITY.md)    
+- **General auth choices**: [`general_mcp_security.md`](`general_mcp_security.md`)  
+  
+### Agentic Intelligence  
+- **Agentic server**: `mcp_service_agentic.py` (Autogen + Azure OpenAI)  
+- **Domain orchestration**: `ask_billing_expert`, `ask_account_expert`, `ask_product_expert`  
+- **Shared tools/data**: `contoso_tools.py` (async DB + KB functions)  
+- **Database seed**: `data/create_db.py`  
+  
+### Advanced Features  
+- **Progress reporting**: `trouble_shoot_device` with `ctx.report_progress`  
+- **Observability**: Logging/timing/error middleware  
+- **Typed contracts**: Pydantic models across all tool endpoints  
+  
+---  
+  
+## Adoption Checklist  
+  
+### Edge Security (APIM)  
+- Require `aud` and `tid`; maintain tenant → backend mapping.  
+- Add URI rewrite/routing for per-tenant or per-business-unit MCPs.  
+  
+### Backend Security (MCP)  
+- Use real JWT verification (Entra ID JWKS); disable passthrough in production.  
+- Enforce role-based tool access; audit/alert on restricted tool usage.  
+  
+### Agentic Enablement  
+- Identify core domains and write small, composable tools.  
+- Add domain agents that know which tools matter and how to combine them.  
+  
+### User Experience & Operations  
+- For any long-running job, report structured progress regularly.  
+- Keep typed inputs/outputs for consistent automation and UIs.  
+- Add logging/timing middleware for predictable performance in production.  
