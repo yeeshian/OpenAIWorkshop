@@ -11,7 +11,7 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 - [Getting Started (Setup Instructions)](./SETUP.md)  
 - [System Architecture Overview](./ARCHITECTURE.md)  
 - [Data Sets](./DATA.md)  
-- [APIM + MCP Security (Optional)](./mcp/README_MCP_SECURITY.md)  
+- [APIM + MCP Security (Optional)](./mcp/MULTI_TENANT_MCP_SECURITY.md)  
 - [Code of Conduct](./CODE_OF_CONDUCT.md)  
 - [Security Guidelines](./SECURITY.md)  
 - [Support](./SUPPORT.md)  
