@@ -234,7 +234,7 @@ async def start():
         headers = {}
         if token and token != "dev-local-token":
             headers['Authorization'] = f'Bearer {token}'
-        ws = await websockets.connect(WS_URL, extra_headers=headers)
+        ws = await websockets.connect(WS_URL, additional_headers=headers)
         cl.user_session.set("ws", ws)
         # register session
         await ws.send(json.dumps({"session_id": session_id, "access_token": token}))

@@ -10,7 +10,8 @@ Everything else is untouched.
 import os  
 import sys  
 from pathlib import Path  
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Set, DefaultDict
+from collections import defaultdict
   
 import uvicorn  
 from fastapi import FastAPI  
@@ -23,27 +24,40 @@ from fastapi import FastAPI, Depends, Header, WebSocket, WebSocketDisconnect
 # ------------------------------------------------------------------  
 load_dotenv()  # read .env if present  
 
-# Azure AD / Entra tenant and expected audience for tokens hitting this backend
-AAD_TENANT_ID = os.getenv("AAD_TENANT_ID") or os.getenv("TENANT_ID")
-if not AAD_TENANT_ID:
-    raise RuntimeError("AAD_TENANT_ID (or TENANT_ID) must be set.")
+# Feature flag: disable auth for local dev / demos
+DISABLE_AUTH = os.getenv("DISABLE_AUTH", "false").lower() in ("1", "true", "yes")
 
-# Audience should be the App ID URI of the MCP API you're protecting via APIM, e.g., "api://<mcp-api-app-id>"
-EXPECTED_AUDIENCE = (
-    os.getenv("MCP_API_AUDIENCE")
-    or os.getenv("API_AUDIENCE")
-    or (f"api://{os.getenv('MCP_API_CLIENT_ID')}" if os.getenv("MCP_API_CLIENT_ID") else None)
-)
-if not EXPECTED_AUDIENCE:
-    raise RuntimeError("Set MCP_API_AUDIENCE (e.g., api://<mcp-api-app-id>) for JWT validation.")
+if DISABLE_AUTH:
+    AAD_TENANT_ID = None
+    EXPECTED_AUDIENCE = None
+else:
+    # Azure AD / Entra tenant and expected audience for tokens hitting this backend
+    AAD_TENANT_ID = os.getenv("AAD_TENANT_ID") or os.getenv("TENANT_ID")
+    if not AAD_TENANT_ID:
+        raise RuntimeError("AAD_TENANT_ID (or TENANT_ID) must be set unless DISABLE_AUTH is true.")
+    # Audience should be the App ID URI of the MCP API you're protecting via APIM, e.g., "api://<mcp-api-app-id>"
+    EXPECTED_AUDIENCE = (
+        os.getenv("MCP_API_AUDIENCE")
+        or os.getenv("API_AUDIENCE")
+        or (f"api://{os.getenv('MCP_API_CLIENT_ID')}" if os.getenv("MCP_API_CLIENT_ID") else None)
+    )
+    if not EXPECTED_AUDIENCE:
+        raise RuntimeError("Set MCP_API_AUDIENCE (e.g., api://<mcp-api-app-id>) for JWT validation or set DISABLE_AUTH=true.")
 
 
 def verify_token(authorization: str | None = Header(None, alias="Authorization")):
-    pass
-    # Minimal check: ensure bearer token present; delegate validation & scopes to MCP/APIM backend.
-    # if not authorization or not authorization.startswith("Bearer "):
-    #     raise HTTPException(401, "No bearer token")
-    # return authorization.split(" ", 1)[1]
+    """Return bearer token or placeholder when auth disabled.
+
+    In production (DISABLE_AUTH=false) you should validate signature, issuer,
+    audience, expiry, scopes, etc. Here we keep it minimal.
+    """
+    if DISABLE_AUTH:
+        return "dev-anon-token"
+    # Minimal check (can be expanded):
+    if not authorization or not authorization.startswith("Bearer "):
+        # For stricter behavior we could raise HTTPException(401,...)
+        return None
+    return authorization.split(" ", 1)[1]
 
 # ------------------------------------------------------------------  
 # Bring project root onto the path & load your agent dynamically  
@@ -64,6 +78,38 @@ STATE_STORE = get_state_store()  # either dict or CosmosDBStateStore
 # FastAPI app  
 # ------------------------------------------------------------------  
 app = FastAPI()  
+
+# ---------------------------------------------------------------
+# WebSocket connection manager (per session broadcast)
+# ---------------------------------------------------------------
+class ConnectionManager:
+    def __init__(self) -> None:
+        self.sessions: DefaultDict[str, Set[WebSocket]] = defaultdict(set)
+
+    async def connect(self, session_id: str, ws: WebSocket) -> None:
+        self.sessions[session_id].add(ws)
+
+    def disconnect(self, session_id: str, ws: WebSocket) -> None:
+        if session_id in self.sessions:
+            self.sessions[session_id].discard(ws)
+            if not self.sessions[session_id]:
+                self.sessions.pop(session_id, None)
+
+    async def broadcast(self, session_id: str, message: dict) -> None:
+        dead: list[WebSocket] = []
+        for ws in list(self.sessions.get(session_id, [])):
+            try:
+                await ws.send_json(message)
+            except Exception:
+                dead.append(ws)
+        for ws in dead:
+            self.disconnect(session_id, ws)
+
+MANAGER = ConnectionManager()
+
+# Make MANAGER globally accessible for background tasks
+import builtins
+builtins.GLOBAL_WS_MANAGER = MANAGER
   
   
 class ChatRequest(BaseModel):  
@@ -113,19 +159,25 @@ async def get_conversation_history(session_id: str, token: str = Depends(verify_
 # ──────────────────────────────────────────────────────────────
 @app.websocket("/ws/chat")
 async def ws_chat(ws: WebSocket):
-    # Accept without auth first; if you need auth, read header:
-    # auth = ws.headers.get("Authorization")
     await ws.accept()
+    connected_session: Optional[str] = None
     try:
         while True:
-            # Expect {"session_id": "...", "prompt": "...", "access_token": "..."} (token optional)
             data = await ws.receive_json()
             session_id = data.get("session_id")
             prompt = data.get("prompt")
             token = data.get("access_token")  # optional
 
-            if not session_id or not prompt:
-                await ws.send_json({"type": "error", "message": "Missing session_id or prompt"})
+            if not session_id:
+                await ws.send_json({"type": "error", "message": "Missing session_id"})
+                continue
+            if connected_session is None:
+                await MANAGER.connect(session_id, ws)
+                connected_session = session_id
+                await ws.send_json({"type": "info", "message": f"Registered session {session_id}"})
+
+            # If only registering (no prompt) continue
+            if not prompt:
                 continue
 
             # Create agent for this session
@@ -134,27 +186,27 @@ async def ws_chat(ws: WebSocket):
             except TypeError:
                 agent = Agent(STATE_STORE, session_id)
 
-            # Side-channel progress sink
             async def progress_sink(ev: dict):
-                # ev = {"type":"progress","tool":"...","percent": int, "message": "..."}
-                await ws.send_json(ev)
+                # Broadcast progress events
+                await MANAGER.broadcast(session_id, ev)
 
             agent.set_progress_sink(progress_sink)
 
             # Stream events from Autogen
             try:
                 async for event in agent.chat_stream(prompt):
-                    print("event: \n", event)
-                    # Serialize and forward
                     evt = await serialize_autogen_event(event)
-                    if evt:
-                        await ws.send_json(evt)
-                # Indicate done for this prompt
-                await ws.send_json({"type": "done"})
+                    if evt and evt.get("type") in ("token", "message", "final"):
+                        # Only send streaming tokens and assistant messages
+                        await MANAGER.broadcast(session_id, evt)
+                await MANAGER.broadcast(session_id, {"type": "done"})
             except Exception as e:
-                await ws.send_json({"type": "error", "message": str(e)})
+                await MANAGER.broadcast(session_id, {"type": "error", "message": str(e)})
     except WebSocketDisconnect:
         pass
+    finally:
+        if connected_session:
+            MANAGER.disconnect(connected_session, ws)
 
 
 # Helper: serialize Autogen streaming events to JSON
