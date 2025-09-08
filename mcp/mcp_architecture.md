@@ -1,3 +1,4 @@
+## MCP Server Architecture
 ```mermaid
 flowchart TD  
     %% Client
