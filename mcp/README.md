@@ -39,9 +39,65 @@ This repository illustrates how to design and operate production-grade MCP servi
 - Blocks disallowed tenants with **403** before traffic reaches the MCP server.  
   
 ---  
+ 
+### General MCP Security Model  
+The following diagram summarizes the pluggable authentication and authorization components available for an MCP server. It shows how different inbound authentication strategies (direct JWT verification, remote OAuth discovery with dynamic client registration, proxying to a non‑DCR IdP, or hosting a full OAuth server) all converge before application logic executes.  
+
+```mermaid
+flowchart TD  
+  subgraph Client["MCP Client"]
+    DCR[Dynamic Client Registration?]  
+    Request[Request to FastMCP Server]  
+    Tokens[Send Token / Start OAuth Flow]  
+  end  
+  
+  subgraph Server["FastMCP Server"]
+    subgraph AuthLayer["Authentication Layer (Configured Provider)"]
+      TV["TokenVerifier (Validates JWTs from known issuer)"]
+      RAP["RemoteAuthProvider (OAuth + DCR-enabled IdP)"]
+      OAP["OAuthProxy (Bridges non-DCR OAuth providers)"]
+      FOS["Full OAuth Server (Implements OAuth internally)"]
+    end  
+    AppLogic[Application Logic / MCP Resources]  
+  end  
+  
+  subgraph External["External Identity Provider / Auth System"]
+    JWTIssuer["JWT Issuer\n(API Gateway, SSO, etc.)"]
+    DCRIdP["DCR-Supported IdP\n(WorkOS AuthKit, modern IdPs)"]
+    NonDCRIdP["Non-DCR IdP\n(GitHub, Google, Azure AD)"]
+  end
+
+  %% Flow for TokenVerifier  
+  Request -->|Token in header| TV  
+  TV -->|Validate via JWKS / Issuer| JWTIssuer  
+  JWTIssuer --> TV  
+  
+  %% Flow for RemoteAuthProvider  
+  Request -->|No token → Discover auth| RAP  
+  RAP -->|Dynamic Client Registration| DCRIdP  
+  DCRIdP -->|Issue Token| RAP  
+  
+  %% Flow for OAuthProxy  
+  Request -->|No token → Discover auth| OAP  
+  OAP -->|Uses fixed credentials| NonDCRIdP  
+  NonDCRIdP -->|Token| OAP  
+  
+  %% Flow for Full OAuth  
+  Request --> FOS  
+  FOS -->|Internal login / consent| FOS  
+  FOS -->|Token issuance| FOS  
+  
+  %% Common path after auth  
+  TV --> AppLogic  
+  RAP --> AppLogic  
+  OAP --> AppLogic  
+  FOS --> AppLogic  
+```
+
+---  
   
 ### Multi-Tenant Design Flow  
-*(Detailed in `MULTI_TENANT_MCP_SECURITY.md`)*  
+*(Detailed in [MULTI_TENANT_MCP_SECURITY.md](./mcp/MULTI_TENANT_MCP_SECURITY.md))*  
   
 1. A multi-tenant “frontend” app in your home tenant defines app roles.  
 2. Customer tenant admins consent and assign their users to roles in their Enterprise App.  

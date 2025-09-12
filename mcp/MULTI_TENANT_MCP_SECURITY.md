@@ -165,18 +165,3 @@ Flow:
 - Implement **Conditional Access** in Azure AD for extra security (MFA, device compliance).  
 - Add **PoP tokens** or **mTLS** between APIM and backends for stronger binding.  
   
----  
-```  
-  
----  
-  
-### ✅ What’s New in This Version  
-- Added a **role assignment process diagram** showing how tenant admins assign roles.  
-- Kept the **main architecture diagram** for the security flow.  
-- Fully documented **step-by-step flow** from sign‑in to backend access.  
-- Clearly separated **coarse-grained (APIM)** and **fine-grained (Backend)** authorization layers.  
-  
----  
-  
-If you want, I can also **add a Mermaid sequence diagram** for the **end-to-end request flow** (User → Frontend → APIM → Backend) with all security checks inline.    
-Do you want me to add that as well?
