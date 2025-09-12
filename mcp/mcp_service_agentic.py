@@ -611,61 +611,7 @@ async def ask_product_expert(question: str, ctx: Context | None = None) -> dict:
 from fastmcp.server import Context
 import asyncio
 
-@server.tool(
-    name="trouble_shoot_device",
-    description="Run a long troubleshooting operation on a device with detailed progress updates.",
-    tags={"diagnostic", "troubleshoot"},
-)
-async def trouble_shoot_device(detail: str, device_name: str, ctx: Context) -> dict:
-    """
-    Simulates ~45 seconds of troubleshooting with progress updates every ~5-10s.
-    Emits MCP progress via ctx.report_progress(progress, total, message).
-    Returns a structured dict summary.
-    """
-    steps = [
-        ("Collecting device inventory", 10),
-        ("Checking network connectivity", 20),
-        ("Resolving DNS and gateway reachability", 30),
-        ("Pinging and tracerouting device", 40),
-        ("Checking device services and logs", 55),
-        ("Restarting management agent", 70),
-        ("Running health checks", 85),
-        ("Summarizing findings", 95),
-        ("Finalizing report", 100),
-    ]
-    total = 100
-    total_seconds = 45.0
-    sleep_per = total_seconds / len(steps)
 
-    # Initial update (0%)
-    # If no progress token, ctx.report_progress() no-ops safely
-    await ctx.report_progress(progress=0, total=total, message=f"Starting troubleshooting for {device_name}...")
-
-    for msg, pct in steps:
-        await asyncio.sleep(sleep_per)
-        await ctx.report_progress(progress=pct, total=total, message=msg)
-
-    # One last update to ensure 100%
-    await ctx.report_progress(progress=100, total=total, message="Troubleshooting complete")
-
-    return {
-        "device_name": device_name,
-        "request_detail": detail,
-        "status": "success",
-        "summary": (
-            "No critical issues found; network appears stable. Restarted management agent and "
-            "ran health checks; device reports healthy and reachable."
-        ),
-        "actions_taken": [
-            "Collected inventory",
-            "Verified connectivity",
-            "Checked DNS/gateway",
-            "Ping/traceroute diagnostics",
-            "Inspected logs",
-            "Restarted management agent",
-            "Ran post-health checks",
-        ],
-    }
 # --- Entrypoint ---  
 if __name__ == "__main__":  
     asyncio.run(server.run_http_async(host="0.0.0.0", port=8000))  
