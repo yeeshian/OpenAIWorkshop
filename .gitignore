@@ -4,9 +4,12 @@
 OAI_CONFIG_LIST
 # Byte-compiled / optimized / DLL files
 __pycache__/
+mcp.json
+**/.chainlit
 *.py[cod]
 *$py.class
 videos
+**/fastmcp
 # C extensions
 *.so
 processed_data

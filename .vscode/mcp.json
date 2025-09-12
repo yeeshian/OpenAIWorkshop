@@ -1,0 +1,13 @@
+{
+	"servers": {
+		"local-mcp": {
+			"url": "http://localhost:8000/mcp",
+			"type": "http"
+		},
+		"my-mcp-server-57fa5dd2": {
+			"url": "https://mcp-backend-service-open.salmonwave-68f59e14.westus.azurecontainerapps.io/mcp",
+			"type": "http"
+		}
+	},
+	"inputs": []
+}

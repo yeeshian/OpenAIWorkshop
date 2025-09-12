@@ -144,8 +144,6 @@ class CosmosDBStateStore(abc.MutableMapping):
         return default if doc is None else doc["value"]  
   
     def __setitem__(self, session_id: str, value: Any) -> None:  
-        # value = make_json_serializable(value)  # ensure JSON-serialisable
-        # print("value after serialization:", value)  # Debugging line
         self.container.upsert_item(  
             {  
                 "id": session_id,          # unique within a tenant  

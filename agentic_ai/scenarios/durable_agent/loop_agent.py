@@ -10,22 +10,16 @@ from autogen_ext.tools.mcp import StreamableHttpServerParams, mcp_server_tools
 from agents.base_agent import BaseAgent    
 import threading, asyncio, uuid
 from datetime import datetime,timezone  
-
 from autogen_core.model_context import BufferedChatCompletionContext
-
 import json
 
-from autogen_core.models import FunctionExecutionResult, FunctionExecutionResultMessage
 load_dotenv()  
 
 # NEW imports
 import asyncio, threading, time
 from typing import Any, Dict
 
-from autogen_core.models import (
-    FunctionExecutionResult,
-    FunctionExecutionResultMessage,
-)
+
 
 # ---------------------------------------------------------------------
 # 1.  User-visible tool (LLM will call this)
@@ -60,7 +54,8 @@ async def _activate_new_line_impl(
 
 
     async def _post_completion() -> None:
-        await asyncio.sleep(20)                              # 1️⃣ simulate work
+        await asyncio.sleep(25)                              # 1️⃣ simulate work (shortened for testing)
+        print(f"🔔 Background completion starting for session {__session_id__}")
 
         # 2️⃣ Load the persisted TeamState dict
         team_state: dict[str, Any] | None = __state_store__.get(__session_id__)
@@ -132,11 +127,57 @@ async def _activate_new_line_impl(
 
         # 9️⃣ Persist updated state
         __state_store__[__session_id__] = team_state
-    # kick off background task in a daemon thread
-    threading.Thread(
-        target=lambda: asyncio.run(_post_completion()),
-        daemon=True,
-    ).start()
+
+        # 🔟 Try to live-push these synthetic events to any websocket clients
+        print(f"🔔 Attempting to broadcast completion events for session {__session_id__}")
+        try:
+            # Access MANAGER through builtins (set by backend)
+            import builtins
+            MANAGER = getattr(builtins, 'GLOBAL_WS_MANAGER', None)
+            if MANAGER:
+                print(f"Found MANAGER via builtins")
+            else:
+                print("No GLOBAL_WS_MANAGER found in builtins")
+        except Exception as e:
+            print(f"Error accessing builtins: {e}")
+            MANAGER = None
+            
+        if MANAGER:
+            print(f"Broadcasting completion events to {len(MANAGER.sessions.get(__session_id__, []))} clients")
+            # Mirror Autogen stream shapes used in serialize_autogen_event
+            try:
+                await MANAGER.broadcast(__session_id__, {
+                    "type": "tool_call",
+                    "calls": [{
+                        "name": "activate_new_line_result_update",
+                        "arguments": {"customer_id": customer_id, "phone_number": phone_number}
+                    }]
+                })
+                await MANAGER.broadcast(__session_id__, {
+                    "type": "tool_result",
+                    "results": [{
+                        "name": "activate_new_line_result_update",
+                        "is_error": False,
+                        "content": f"✅ Activation complete – customer {customer_id}, phone {phone_number} is now live."
+                    }]
+                })
+                await MANAGER.broadcast(__session_id__, {
+                    "type": "message",
+                    "role": "assistant",
+                    "content": f"Activation finished for {phone_number}."
+                })
+                print("Successfully broadcast all completion events")
+            except Exception as e:
+                print(f"Error broadcasting: {e}")
+        else:
+            print("No MANAGER found - background events will not be pushed to UI")
+    # Schedule background coroutine on current loop (preferred over new loop in thread)
+    try:
+        loop = asyncio.get_running_loop()
+        loop.create_task(_post_completion())
+    except RuntimeError:
+        # Fallback (should not normally happen inside async context)
+        threading.Thread(target=lambda: asyncio.run(_post_completion()), daemon=True).start()
 
     # Immediate (first) response shown to the user
     return (
@@ -145,19 +186,24 @@ async def _activate_new_line_impl(
     )
 # ---------------------------------------------------------------------------
 class Agent(BaseAgent):  
-    def __init__(self, state_store, session_id) -> None:  
+    def __init__(self, state_store, session_id, access_token: str | None = None) -> None:  
         super().__init__(state_store, session_id)  
         self.loop_agent = None  
         self._initialized = False  
+        self._access_token = access_token
   
     async def _setup_loop_agent(self) -> None:  
         """Initialize the assistant and tools once."""  
         if self._initialized:  
             return  
   
+        headers = {"Content-Type": "application/json"}
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+  
         server_params = StreamableHttpServerParams(  
             url=self.mcp_server_uri,  
-            headers={"Content-Type": "application/json"},  
+            headers=headers,  
             timeout=30  
         )  
   
@@ -232,4 +278,18 @@ class Agent(BaseAgent):
         print(f"Updated state for session {self.session_id}: {new_state}")
         self._setstate(new_state)  
   
-        return assistant_response  
+        return assistant_response
+    async def chat_stream(self, prompt: str):
+        """
+        Async generator that yields Autogen streaming events while processing prompt.
+        Backend will consume this and forward to frontend.
+        """
+        await self._setup_loop_agent()
+        stream = self.loop_agent.run_stream(task=prompt, cancellation_token=CancellationToken())
+
+        async for event in stream:
+            yield event
+
+        # After run finishes, persist state
+        new_state = await self.loop_agent.save_state()
+        self._setstate(new_state)
