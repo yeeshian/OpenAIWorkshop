@@ -22,13 +22,16 @@ cd "$MCP_DIR"
 uv run mcp_service.py 2>&1 | log_with_prefix "MCP" >> $OUTPUT_LOG &
 MCP_PID=$!
 
+sleep 5
 
 # Start backend
 echo "Starting backend..."
 cd "$APP_DIR"
 uv run backend.py 2>&1 | log_with_prefix "BACKEND" >> $OUTPUT_LOG &
 BACKEND_PID=$!
-uv run streamlit_app.py 2>&1 | log_with_prefix "FRONTEND" >> $OUTPUT_LOG &
+
+sleep 5
+uv run streamlit run frontend.py 2>&1 | log_with_prefix "FRONTEND" >> $OUTPUT_LOG &
 FRONTEND_PID=$!
 
 echo "MCP Server PID: $MCP_PID"
