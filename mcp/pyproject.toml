@@ -1,0 +1,21 @@
+[project]
+name = "mcp-service-aoai-workshop"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "autogen-agentchat==0.7.4",
+    "autogen-ext[mcp]==0.7.4",
+    "faker==26.0.0",
+    "fastapi==0.116.1",
+    "fastmcp==2.12.0",
+    "flasgger==0.9.7.1",
+    "flask==3.1.2",
+    "mcp==1.13.1",
+    "openai==1.102.0",
+    "pyjwt[crypto]==2.10.1",
+    "python-dotenv==1.1.0",
+    "tenacity==8.5.0",
+    "tiktoken>=0.11.0",
+]
