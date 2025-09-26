@@ -1,0 +1,48 @@
+[project]
+name = "agentic-ai-applications"
+version = "0.1.0"
+description = "Applications for the OpenAI Workshop agentic AI demos."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+       "flask",
+       "Faker",
+       "python-dotenv",
+       "tenacity",
+    "openai",
+       "flasgger",
+       "fastmcp",
+       "autogen-ext[mcp]",
+       "autogen-agentchat",
+       "uvicorn",
+       "fastapi",
+       "streamlit",
+       "requests",
+       "pydantic",
+       "semantic-kernel",
+       "a2a-sdk",
+       "httpx",
+       "azure-cosmos",
+       "mcp",
+       "msal",
+       "PyJWT[crypto]",
+       "chainlit",
+       "websockets",
+    "agent-framework-project",
+]
+
+[dependency-groups]
+dev = [
+    "uv>=0.8.2,<0.9.0",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.2.1",
+    "ruff>=0.11.8",
+]
+
+[tool.uv.sources]
+agent-framework-project = { path = "../../reference/agent-framework/python", editable = true }
+
+[tool.uv]
+package = false
+prerelease = "if-necessary-or-explicit"
