@@ -31,6 +31,20 @@ venv\Scripts\activate
 pip install -r requirements.txt  
 ```
 
+#### Prefer `uv` for faster installs?
+
+If you use [uv](https://github.com/astral-sh/uv) you can skip manual virtualenv activation and let uv manage it for you:
+
+```bash
+# Create (or reuse) .venv and sync dependencies
+uv sync --project agentic_ai/applications
+
+# Alternatively, install packages into the active environment
+uv pip install -r agentic_ai/applications/requirements.txt
+```
+
+> `uv` automatically creates a `.venv` in the project root when you run `uv sync`. Activate it with `uv venv --activate` or by sourcing `.venv/bin/activate` (Unix) / `.venv\Scripts\activate` (Windows).
+
 #### Example `requirements.txt` includes:  
   
 - `flask`  
@@ -98,8 +112,9 @@ MCP_SERVER_URI="http://localhost:8000/mcp"
 # AGENT_MODULE="agents.autogen.single_agent.loop_agent"
 # AGENT_MODULE="agents.autogen.multi_agent.collaborative_multi_agent_round_robin"
 # AGENT_MODULE="agents.autogen.multi_agent.collaborative_multi_agent_selector_group"
-# AGENT_MODULE="agents.autogen.multi_agent.handoff_multi_agent_domain"
+# AGENT_MODULE="agents.autogen.multi_agent.handoff_multi_domain_agent"
 # AGENT_MODULE="agents.agent_framework.single_agent"
+# AGENT_MODULE="agents.agent_framework.multi_agent.handoff_multi_domain_agent"
 # AGENT_MODULE="agents.agent_framework.multi_agent.magentic_group"
 # AGENT_MODULE="agents.semantic_kernel.multi_agent.collaborative_multi_agent"
 # AGENT_MODULE="agents.semantic_kernel.multi_agent.a2a.collaborative_multi_agent"

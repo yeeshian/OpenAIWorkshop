@@ -27,6 +27,7 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
   - Azure AI Agent Service  
   - Semantic Kernel  
   - Autogen  
+  - Agent Framework (Magentic workflows)  
   
 ---  
   
@@ -39,6 +40,7 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 - **Flexible Agent Architecture:**  
   - Supports single-agent, multi-agent, or reflection-based agents (selectable via `.env`).  
   - Agents can self-loop, collaborate, reflect, or take on dynamic roles as defined in modules.  
+  - Includes Agent Framework Magentic collaboration and handoff-oriented multi-domain teams.  
 - **Session-Based Chat:** Persistent conversation history for each session.  
 - **Full-Stack Application:**  
   - FastAPI backend with RESTful endpoints (chat, reset, history, etc.).  
