@@ -446,10 +446,9 @@ async def get_all_customers() -> List[CustomerSummary]:
   
 @mcp.tool(description="Get a full customer profile including their subscriptions")  
 async def get_customer_detail(  
-    customer_id: Annotated[str, "Customer identifier value"],  
+    customer_id: Annotated[int, "Customer identifier value"],  
 ) -> CustomerDetail:  
-    cid = _coerce_int(customer_id, field_name="customer_id")
-    data = await get_customer_detail_async(cid)
+    data = await get_customer_detail_async(customer_id)
     return CustomerDetail(**data)  
   
   
@@ -459,10 +458,9 @@ async def get_customer_detail(
     )  
 )  
 async def get_subscription_detail(  
-    subscription_id: Annotated[str, "Subscription identifier value"],  
+    subscription_id: Annotated[int, "Subscription identifier value"],  
 ) -> SubscriptionDetail:  
-    sid = _coerce_int(subscription_id, field_name="subscription_id")
-    data = await get_subscription_detail_async(sid)
+    data = await get_subscription_detail_async(subscription_id)
 
     # Convert nested data to Pydantic models
     invoices = []
@@ -487,7 +485,7 @@ async def get_invoice_payments(
 @mcp.tool(description="Record a payment for a given invoice and get new outstanding balance")  
 async def pay_invoice(  
     invoice_id: Annotated[str, "Invoice identifier value"],  
-    amount: Annotated[str, "Payment amount"],  
+    amount: Annotated[float, "Payment amount"],  
     method: Annotated[str, "Payment method"] = "credit_card",  
 ) -> Dict[str, Any]:  
     iid = _coerce_int(invoice_id, field_name="invoice_id")
@@ -497,7 +495,7 @@ async def pay_invoice(
   
 @mcp.tool(description="Daily data‑usage records for a subscription over a date range")  
 async def get_data_usage(  
-    subscription_id: Annotated[str, "Subscription identifier value"],  
+    subscription_id: Annotated[int, "Subscription identifier value"],  
     start_date: Annotated[str, "Inclusive start date (YYYY-MM-DD)"],  
     end_date: Annotated[str, "Inclusive end date (YYYY-MM-DD)"],  
     aggregate: Annotated[str, "Set to true for aggregate statistics"] = "false",  
@@ -521,7 +519,7 @@ async def get_promotions() -> List[Promotion]:
     "(evaluates basic loyalty/date criteria)."  
 )  
 async def get_eligible_promotions(  
-    customer_id: Annotated[str, "Customer identifier value"],  
+    customer_id: Annotated[int, "Customer identifier value"],  
 ) -> List[Promotion]:  
     cid = _coerce_int(customer_id, field_name="customer_id")
     data = await get_eligible_promotions_async(cid)
@@ -542,7 +540,7 @@ async def search_knowledge_base(
 # ─── Security Logs ───────────────────────────────────────────────────────  
 @mcp.tool(description="Security events for a customer (newest first)")  
 async def get_security_logs(  
-    customer_id: Annotated[str, "Customer identifier value"],  
+    customer_id: Annotated[int, "Customer identifier value"],  
 ) -> List[SecurityLog]:  
     cid = _coerce_int(customer_id, field_name="customer_id")
     data = await get_security_logs_async(cid)
@@ -552,7 +550,7 @@ async def get_security_logs(
 # ─── Orders ──────────────────────────────────────────────────────────────  
 @mcp.tool(description="All orders placed by a customer")  
 async def get_customer_orders(  
-    customer_id: Annotated[str, "Customer identifier value"],  
+    customer_id: Annotated[int, "Customer identifier value"],  
 ) -> List[Order]:  
     cid = _coerce_int(customer_id, field_name="customer_id")
     data = await get_customer_orders_async(cid)
@@ -562,7 +560,7 @@ async def get_customer_orders(
 # ─── Support Tickets ────────────────────────────────────────────────────  
 @mcp.tool(description="Retrieve support tickets for a customer (optionally filter by open status)")  
 async def get_support_tickets(  
-    customer_id: Annotated[str, "Customer identifier value"],  
+    customer_id: Annotated[int, "Customer identifier value"],  
     open_only: Annotated[str, "Filter to open tickets (true/false)"] = "false",  
 ) -> List[SupportTicket]:  
     cid = _coerce_int(customer_id, field_name="customer_id")
@@ -573,8 +571,8 @@ async def get_support_tickets(
   
 @mcp.tool(description="Create a new support ticket for a customer")  
 async def create_support_ticket(  
-    customer_id: Annotated[str, "Customer identifier value"],  
-    subscription_id: Annotated[str, "Subscription identifier value"],  
+    customer_id: Annotated[int, "Customer identifier value"],  
+    subscription_id: Annotated[int, "Subscription identifier value"],  
     category: Annotated[str, "Ticket category"],  
     priority: Annotated[str, "Ticket priority"],  
     subject: Annotated[str, "Ticket subject"],  
@@ -615,7 +613,7 @@ async def get_product_detail(
 # ─── Update Subscription ────────────────────────────────────────────────  
 @mcp.tool(description="Update one or more mutable fields on a subscription.")  
 async def update_subscription(  
-    subscription_id: Annotated[str, "Subscription identifier value"],  
+    subscription_id: Annotated[int, "Subscription identifier value"],  
     status: Annotated[str, "New subscription status"] = "",  
     service_status: Annotated[str, "New service status"] = "",  
     product_id: Annotated[str, "Product identifier to switch to"] = "",  
@@ -653,7 +651,7 @@ async def update_subscription(
 # ─── Unlock Account ──────────────────────────────────────────────────────  
 @mcp.tool(description="Unlock a customer account locked for security reasons")  
 async def unlock_account(  
-    customer_id: Annotated[str, "Customer identifier value"],  
+    customer_id: Annotated[int, "Customer identifier value"],  
 ) -> dict:  
     cid = _coerce_int(customer_id, field_name="customer_id")
     return await unlock_account_async(cid)
@@ -663,7 +661,7 @@ async def unlock_account(
 # ─── Billing summary ─────────────────────────────────────────────────────  
 @mcp.tool(description="What does a customer currently owe across all subscriptions?")  
 async def get_billing_summary(  
-    customer_id: Annotated[str, "Customer identifier value"],  
+    customer_id: Annotated[int, "Customer identifier value"],  
 ) -> Dict[str, Any]:  
     cid = _coerce_int(customer_id, field_name="customer_id")
     return await get_billing_summary_async(cid)  
