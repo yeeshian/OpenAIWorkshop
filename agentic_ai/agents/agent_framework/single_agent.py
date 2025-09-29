@@ -1,10 +1,13 @@
+import json
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from agent_framework import AgentThread, ChatAgent, MCPStreamableHTTPTool
 from agent_framework.azure import AzureOpenAIChatClient
 
 from agents.base_agent import BaseAgent
+
+logger = logging.getLogger(__name__)
 
 
 class Agent(BaseAgent):
@@ -27,21 +30,8 @@ class Agent(BaseAgent):
                 "AZURE_OPENAI_CHAT_DEPLOYMENT, AZURE_OPENAI_ENDPOINT, and AZURE_OPENAI_API_VERSION are set."
             )
 
-        headers: Dict[str, str] = {"Content-Type": "application/json"}
-        if self._access_token:
-            headers["Authorization"] = f"Bearer {self._access_token}"
-
-        mcp_tool = None
-        if self.mcp_server_uri:
-            mcp_tool = MCPStreamableHTTPTool(
-                name="mcp-streamable",
-                url=self.mcp_server_uri,
-                headers=headers,
-                timeout=30,
-                request_timeout=30,
-            )
-        else:
-            logging.warning("MCP_SERVER_URI is not configured; agent will run without MCP tools.")
+        headers = self._build_headers()
+        mcp_tools = await self._maybe_create_tools(headers)
 
         chat_client = AzureOpenAIChatClient(
             api_key=self.azure_openai_key,
@@ -57,7 +47,7 @@ class Agent(BaseAgent):
             "Never hallunicate any operation that you do not actually do."
         )
 
-        tools = [mcp_tool] if mcp_tool else None
+        tools = mcp_tools[0] if mcp_tools else None
 
         self._agent = ChatAgent(
             name="ai_assistant",
@@ -73,12 +63,81 @@ class Agent(BaseAgent):
             self._agent = None
             raise
 
+        await self._log_mcp_tool_details()
+
         if self.state:
             self._thread = await self._agent.deserialize_thread(self.state)
         else:
             self._thread = self._agent.get_new_thread()
 
         self._initialized = True
+
+    def _build_headers(self) -> Dict[str, str]:
+        headers: Dict[str, str] = {"Content-Type": "application/json"}
+        if self._access_token:
+            headers["Authorization"] = f"Bearer {self._access_token}"
+        return headers
+
+    async def _maybe_create_tools(self, headers: Dict[str, str]) -> List[MCPStreamableHTTPTool] | None:
+        if not self.mcp_server_uri:
+            logger.warning("MCP_SERVER_URI is not configured; agent will run without MCP tools.")
+            return None
+
+        tool = MCPStreamableHTTPTool(
+            name="mcp-streamable",
+            url=self.mcp_server_uri,
+            headers=headers,
+            timeout=30,
+            request_timeout=30,
+        )
+
+        return [tool]
+
+    async def _log_mcp_tool_details(self) -> None:
+        # if not self._agent:
+        #     return
+
+        mcp_tools = getattr(self._agent, "_local_mcp_tools", None)
+        if not mcp_tools:
+            logger.debug("No MCP tools registered on the agent; skipping tool inspection.")
+            return
+
+        mcp_tool = mcp_tools[0]
+        session = getattr(mcp_tool, "session", None)
+        print("session ", session)
+        if session is None:
+            logger.debug("MCP tool session is not available; cannot list tools for debugging.")
+            return
+
+        try:
+            tool_list = await session.list_tools()
+        except Exception as exc:
+            logger.exception("Failed to fetch MCP tool metadata: %s", exc)
+            return
+
+        if not tool_list or not getattr(tool_list, "tools", None):
+            logger.debug("No tools returned from MCP server during inspection.")
+            return
+
+        for tool_info in tool_list.tools:
+            print(tool_info)
+            if tool_info.name == "get_customer_detail":
+                try:
+                    serialized = tool_info.model_dump()
+                except Exception:
+                    serialized = {
+                        "name": tool_info.name,
+                        "description": getattr(tool_info, "description", ""),
+                        "inputSchema": getattr(tool_info, "inputSchema", {}),
+                    }
+
+                logger.debug(
+                    "MCP tool 'get_customer_detail' metadata: %s",
+                    json.dumps(serialized, indent=2, sort_keys=True),
+                )
+                break
+        else:
+            logger.debug("MCP tool 'get_customer_detail' not found in server tool list.")
 
     async def chat_async(self, prompt: str) -> str:
         await self._setup_single_agent()

@@ -5,8 +5,7 @@ description = "Applications for the OpenAI Workshop agentic AI demos."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-       "flask",
-       "Faker",
+       "tiktoken",
        "python-dotenv",
        "tenacity",
     "openai",
