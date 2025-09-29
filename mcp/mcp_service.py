@@ -2,7 +2,7 @@ from fastmcp import FastMCP
 from fastmcp.server.middleware import Middleware, MiddlewareContext  # added
 from typing import Annotated, List, Optional, Dict, Any  
 from pydantic import BaseModel  
-import sqlite3, os, json, math, asyncio, logging, time  
+import sqlite3, os, asyncio, logging, time  
 from datetime import datetime  
 from dotenv import load_dotenv  
 from fastmcp.server.middleware import Middleware, MiddlewareContext 
@@ -304,32 +304,6 @@ class SupportTicket(BaseModel):
     cs_agent: str  
   
   
-# ─── simple arg models ───────────────────────────────────────────────────  
-def _coerce_int(value: str, *, field_name: str) -> int:
-    try:
-        return int(str(value).strip())
-    except (TypeError, ValueError):
-        raise ValueError(f"{field_name} must be an integer-compatible value") from None
-
-
-def _coerce_float(value: str, *, field_name: str) -> float:
-    try:
-        return float(str(value).strip())
-    except (TypeError, ValueError):
-        raise ValueError(f"{field_name} must be a float-compatible value") from None
-
-
-def _coerce_bool(value: str, *, field_name: str) -> bool:
-    truthy = {"true", "1", "yes", "y", "on"}
-    falsy = {"false", "0", "no", "n", "off", ""}
-    normalized = str(value).strip().lower()
-    if normalized in truthy:
-        return True
-    if normalized in falsy:
-        return False
-    raise ValueError(f"{field_name} must be a boolean-compatible value")
-
-
 # Normalized scope helpers
 SECURITY_ROLE = os.getenv("SECURITY_ROLE", "security")
 QUERY_ROLE = os.getenv("QUERY_ROLE", "query")
@@ -475,22 +449,19 @@ async def get_subscription_detail(
   
 @mcp.tool(description="Return invoice‑level payments list")  
 async def get_invoice_payments(  
-    invoice_id: Annotated[str, "Invoice identifier value"],  
+    invoice_id: Annotated[int, "Invoice identifier value"],  
 ) -> List[Payment]:  
-    iid = _coerce_int(invoice_id, field_name="invoice_id")
-    data = await get_invoice_payments_async(iid)
+    data = await get_invoice_payments_async(invoice_id)
     return [Payment(**r) for r in data]
   
   
 @mcp.tool(description="Record a payment for a given invoice and get new outstanding balance")  
 async def pay_invoice(  
-    invoice_id: Annotated[str, "Invoice identifier value"],  
+    invoice_id: Annotated[int, "Invoice identifier value"],  
     amount: Annotated[float, "Payment amount"],  
     method: Annotated[str, "Payment method"] = "credit_card",  
 ) -> Dict[str, Any]:  
-    iid = _coerce_int(invoice_id, field_name="invoice_id")
-    amt = _coerce_float(amount, field_name="amount")
-    return await pay_invoice_async(iid, amt, method)
+    return await pay_invoice_async(invoice_id, amount, method)
   
   
 @mcp.tool(description="Daily data‑usage records for a subscription over a date range")  
@@ -498,12 +469,10 @@ async def get_data_usage(
     subscription_id: Annotated[int, "Subscription identifier value"],  
     start_date: Annotated[str, "Inclusive start date (YYYY-MM-DD)"],  
     end_date: Annotated[str, "Inclusive end date (YYYY-MM-DD)"],  
-    aggregate: Annotated[str, "Set to true for aggregate statistics"] = "false",  
+    aggregate: Annotated[bool, "Set to true for aggregate statistics"] = False,  
 ) -> List[DataUsageRecord] | Dict[str, Any]:  
-    sid = _coerce_int(subscription_id, field_name="subscription_id")
-    should_aggregate = _coerce_bool(aggregate, field_name="aggregate")
-    result = await get_data_usage_async(sid, start_date, end_date, should_aggregate)
-    if should_aggregate:
+    result = await get_data_usage_async(subscription_id, start_date, end_date, aggregate)
+    if aggregate:
         return result
     return [DataUsageRecord(**r) for r in result]
   
@@ -521,8 +490,7 @@ async def get_promotions() -> List[Promotion]:
 async def get_eligible_promotions(  
     customer_id: Annotated[int, "Customer identifier value"],  
 ) -> List[Promotion]:  
-    cid = _coerce_int(customer_id, field_name="customer_id")
-    data = await get_eligible_promotions_async(cid)
+    data = await get_eligible_promotions_async(customer_id)
     return [Promotion(**r) for r in data]  
   
   
@@ -530,10 +498,9 @@ async def get_eligible_promotions(
 @mcp.tool(description="Semantic search on policy / procedure knowledge documents")  
 async def search_knowledge_base(  
     query: Annotated[str, "Natural language query"],  
-    topk: Annotated[str, "Number of top documents to return"] = "3",  
+    topk: Annotated[int, "Number of top documents to return"] = 3,  
 ) -> List[KBDoc]:  
-    top_k_value = _coerce_int(topk, field_name="topk")
-    data = await search_knowledge_base_async(query, top_k_value)
+    data = await search_knowledge_base_async(query, topk)
     return [KBDoc(**r) for r in data]
   
   
@@ -542,8 +509,7 @@ async def search_knowledge_base(
 async def get_security_logs(  
     customer_id: Annotated[int, "Customer identifier value"],  
 ) -> List[SecurityLog]:  
-    cid = _coerce_int(customer_id, field_name="customer_id")
-    data = await get_security_logs_async(cid)
+    data = await get_security_logs_async(customer_id)
     return [SecurityLog(**r) for r in data]
   
   
@@ -552,8 +518,7 @@ async def get_security_logs(
 async def get_customer_orders(  
     customer_id: Annotated[int, "Customer identifier value"],  
 ) -> List[Order]:  
-    cid = _coerce_int(customer_id, field_name="customer_id")
-    data = await get_customer_orders_async(cid)
+    data = await get_customer_orders_async(customer_id)
     return [Order(**r) for r in data]
   
   
@@ -561,11 +526,9 @@ async def get_customer_orders(
 @mcp.tool(description="Retrieve support tickets for a customer (optionally filter by open status)")  
 async def get_support_tickets(  
     customer_id: Annotated[int, "Customer identifier value"],  
-    open_only: Annotated[str, "Filter to open tickets (true/false)"] = "false",  
+    open_only: Annotated[bool, "Filter to open tickets"] = False,  
 ) -> List[SupportTicket]:  
-    cid = _coerce_int(customer_id, field_name="customer_id")
-    only_open = _coerce_bool(open_only, field_name="open_only")
-    data = await get_support_tickets_async(cid, only_open)
+    data = await get_support_tickets_async(customer_id, open_only)
     return [SupportTicket(**r) for r in data]
   
   
@@ -578,9 +541,7 @@ async def create_support_ticket(
     subject: Annotated[str, "Ticket subject"],  
     description: Annotated[str, "Ticket description"],  
 ) -> SupportTicket:  
-    cid = _coerce_int(customer_id, field_name="customer_id")
-    sid = _coerce_int(subscription_id, field_name="subscription_id")
-    data = await create_support_ticket_async(cid, sid, category, priority, subject, description)
+    data = await create_support_ticket_async(customer_id, subscription_id, category, priority, subject, description)
     return SupportTicket(**data)
   
   
@@ -595,18 +556,17 @@ class Product(BaseModel):
   
 @mcp.tool(description="List / search available products (optional category filter)")  
 async def get_products(  
-    category: Annotated[str, "Optional category filter"] = "",  
+    category: Annotated[Optional[str], "Optional category filter"] = None,  
 ) -> List[Product]:  
-    data = await get_products_async(category or None)
+    data = await get_products_async(category)
     return [Product(**r) for r in data]
   
   
 @mcp.tool(description="Return a single product by ID")  
 async def get_product_detail(  
-    product_id: Annotated[str, "Product identifier value"],  
+    product_id: Annotated[int, "Product identifier value"],  
 ) -> Product:  
-    pid = _coerce_int(product_id, field_name="product_id")
-    data = await get_product_detail_async(pid)
+    data = await get_product_detail_async(product_id)
     return Product(**data)  
   
   
@@ -614,38 +574,37 @@ async def get_product_detail(
 @mcp.tool(description="Update one or more mutable fields on a subscription.")  
 async def update_subscription(  
     subscription_id: Annotated[int, "Subscription identifier value"],  
-    status: Annotated[str, "New subscription status"] = "",  
-    service_status: Annotated[str, "New service status"] = "",  
-    product_id: Annotated[str, "Product identifier to switch to"] = "",  
-    start_date: Annotated[str, "Updated subscription start date (YYYY-MM-DD)"] = "",  
-    end_date: Annotated[str, "Updated subscription end date (YYYY-MM-DD)"] = "",  
-    autopay_enabled: Annotated[str, "Set autopay enabled flag (true/false)"] = "",  
-    roaming_enabled: Annotated[str, "Set roaming enabled flag (true/false)"] = "",  
-    speed_tier: Annotated[str, "New speed tier label"] = "",  
-    data_cap_gb: Annotated[str, "Updated data cap in GB"] = "",  
+    status: Annotated[Optional[str], "New subscription status"] = None,  
+    service_status: Annotated[Optional[str], "New service status"] = None,  
+    product_id: Annotated[Optional[int], "Product identifier to switch to"] = None,  
+    start_date: Annotated[Optional[str], "Updated subscription start date (YYYY-MM-DD)"] = None,  
+    end_date: Annotated[Optional[str], "Updated subscription end date (YYYY-MM-DD)"] = None,  
+    autopay_enabled: Annotated[Optional[int], "Set autopay enabled flag (0 or 1)"] = None,  
+    roaming_enabled: Annotated[Optional[int], "Set roaming enabled flag (0 or 1)"] = None,  
+    speed_tier: Annotated[Optional[str], "New speed tier label"] = None,  
+    data_cap_gb: Annotated[Optional[int], "Updated data cap in GB"] = None,  
 ) -> dict:  
-    sid = _coerce_int(subscription_id, field_name="subscription_id")
     updates: Dict[str, Any] = {}
 
-    if status.strip():
+    if status is not None:
         updates["status"] = status
-    if service_status.strip():
+    if service_status is not None:
         updates["service_status"] = service_status
-    if product_id.strip():
-        updates["product_id"] = _coerce_int(product_id, field_name="product_id")
-    if start_date.strip():
+    if product_id is not None:
+        updates["product_id"] = product_id
+    if start_date is not None:
         updates["start_date"] = start_date
-    if end_date.strip():
+    if end_date is not None:
         updates["end_date"] = end_date
-    if autopay_enabled.strip():
-        updates["autopay_enabled"] = int(_coerce_bool(autopay_enabled, field_name="autopay_enabled"))
-    if roaming_enabled.strip():
-        updates["roaming_enabled"] = int(_coerce_bool(roaming_enabled, field_name="roaming_enabled"))
-    if speed_tier.strip():
+    if autopay_enabled is not None:
+        updates["autopay_enabled"] = autopay_enabled
+    if roaming_enabled is not None:
+        updates["roaming_enabled"] = roaming_enabled
+    if speed_tier is not None:
         updates["speed_tier"] = speed_tier
-    if data_cap_gb.strip():
-        updates["data_cap_gb"] = _coerce_int(data_cap_gb, field_name="data_cap_gb")
-    return await update_subscription_async(sid, updates)
+    if data_cap_gb is not None:
+        updates["data_cap_gb"] = data_cap_gb
+    return await update_subscription_async(subscription_id, updates)
   
   
 # ─── Unlock Account ──────────────────────────────────────────────────────  
@@ -653,8 +612,7 @@ async def update_subscription(
 async def unlock_account(  
     customer_id: Annotated[int, "Customer identifier value"],  
 ) -> dict:  
-    cid = _coerce_int(customer_id, field_name="customer_id")
-    return await unlock_account_async(cid)
+    return await unlock_account_async(customer_id)
   
   
   
@@ -663,8 +621,7 @@ async def unlock_account(
 async def get_billing_summary(  
     customer_id: Annotated[int, "Customer identifier value"],  
 ) -> Dict[str, Any]:  
-    cid = _coerce_int(customer_id, field_name="customer_id")
-    return await get_billing_summary_async(cid)  
+    return await get_billing_summary_async(customer_id)  
   
   
   
