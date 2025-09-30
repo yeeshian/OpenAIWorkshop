@@ -328,11 +328,11 @@ agentic_ai/
 ```bash
 # Start MCP server
 cd mcp
-python mcp_service.py
+uv run python mcp_service.py
 
 # Start backend
 cd agentic_ai/applications
-python backend.py
+uv run python backend.py
 
 # Start React frontend
 cd react-frontend
