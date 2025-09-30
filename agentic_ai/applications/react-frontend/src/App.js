@@ -67,6 +67,7 @@ function App() {
   const [orchestratorEvents, setOrchestratorEvents] = useState([]);
   const [agentEvents, setAgentEvents] = useState({});
   const [currentAgents, setCurrentAgents] = useState(new Set());
+  const [currentTurn, setCurrentTurn] = useState(0); // Track conversation turn for tool call grouping
   const [lastFinalAnswer, setLastFinalAnswer] = useState(null); // Track last final answer for deduplication
 
   const wsRef = useRef(null);
@@ -154,6 +155,8 @@ function App() {
               name: event.agent_id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
               tokens: [],
               complete: false,
+              // Convention: store agent's display preference (default true for backward compatibility)
+              showMessageInInternalProcess: event.show_message_in_internal_process !== false,
             },
           };
         });
@@ -192,32 +195,78 @@ function App() {
         });
         break;
 
-      case 'final_result':
-        // Final answer from the workflow - check for duplicates
-        if (event.content && event.content !== lastFinalAnswer) {
-          setLastFinalAnswer(event.content);
-          setMessages((prev) => [
+      case 'tool_called':
+        // Tool was called by an agent - track it under that agent with turn number
+        setAgentEvents((prev) => {
+          const agentId = event.agent_id || 'single_agent';
+          const existing = prev[agentId] || { name: agentId, tokens: [], toolCallsByTurn: {} };
+          
+          // Group tools by turn number - use turn from event if available, otherwise use frontend's currentTurn
+          const turnNumber = event.turn !== undefined ? event.turn : currentTurn;
+          const toolCallsByTurn = existing.toolCallsByTurn || {};
+          const turnTools = toolCallsByTurn[turnNumber] || [];
+          
+          // Add tool to current turn if not already there
+          if (!turnTools.includes(event.tool_name)) {
+            turnTools.push(event.tool_name);
+            toolCallsByTurn[turnNumber] = turnTools;
+          }
+          
+          return {
             ...prev,
-            {
-              role: 'assistant',
-              content: event.content,
-              timestamp: new Date(),
+            [agentId]: {
+              ...existing,
+              toolCallsByTurn,
             },
-          ]);
+          };
+        });
+        break;
+
+      case 'final_result':
+        // Final answer from the workflow - check for duplicates against last message
+        if (event.content) {
+          setMessages((prev) => {
+            // Check if last message is identical
+            const lastMsg = prev[prev.length - 1];
+            if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content === event.content) {
+              console.log('[DEDUP] Skipping duplicate final_result');
+              return prev;
+            }
+            return [
+              ...prev,
+              {
+                role: 'assistant',
+                content: event.content,
+                timestamp: new Date(),
+              },
+            ];
+          });
+          setLastFinalAnswer(event.content);
         }
         setIsProcessing(false);
         break;
 
       case 'message':
-        // Legacy message event (for Autogen compatibility)
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: event.content,
-            timestamp: new Date(),
-          },
-        ]);
+        // Legacy message event (for Autogen compatibility) - also check for duplicates
+        if (event.content) {
+          setMessages((prev) => {
+            // Check if last message is identical
+            const lastMsg = prev[prev.length - 1];
+            if (lastMsg && lastMsg.role === 'assistant' && lastMsg.content === event.content) {
+              console.log('[DEDUP] Skipping duplicate message event');
+              return prev;
+            }
+            return [
+              ...prev,
+              {
+                role: 'assistant',
+                content: event.content,
+                timestamp: new Date(),
+              },
+            ];
+          });
+          setLastFinalAnswer(event.content);
+        }
         setIsProcessing(false);
         break;
 
@@ -246,6 +295,9 @@ function App() {
   const handleSend = () => {
     if (!input.trim() || !wsRef.current || isProcessing) return;
 
+    // Increment turn for this new request
+    setCurrentTurn((prev) => prev + 1);
+
     // Add user message
     setMessages((prev) => [
       ...prev,
@@ -256,11 +308,10 @@ function App() {
       },
     ]);
 
-    // Clear internal process for new request
-    setOrchestratorEvents([]);
-    setAgentEvents({});
-    setCurrentAgents(new Set());
-    setLastFinalAnswer(null); // Reset deduplication
+    // NOTE: Do NOT clear orchestratorEvents/agentEvents here - they should accumulate
+    // across multiple turns. Only clear on new session or explicit reset.
+    // Just reset the last answer deduplication tracking.
+    setLastFinalAnswer(null);
 
     // Send to backend
     wsRef.current.send(JSON.stringify({
@@ -284,6 +335,7 @@ function App() {
     setOrchestratorEvents([]);
     setAgentEvents({});
     setCurrentAgents(new Set());
+    setCurrentTurn(0);
     setLastFinalAnswer(null);
 
     // Close existing WebSocket
@@ -316,6 +368,15 @@ function App() {
   // Helper: Get icon and label for orchestrator event kind
   const getOrchestratorDisplay = (kind) => {
     switch (kind) {
+      case 'instruction':
+        return { icon: <SendIcon fontSize="small" />, label: '📤 Instructing Agent', color: 'secondary', bgColor: '#f3e5f5' };
+      case 'task_ledger':
+        return { icon: <PlanIcon fontSize="small" />, label: '📋 Planning', color: 'info', bgColor: '#e3f2fd' };
+      case 'user_task':
+        return { icon: <IdeaIcon fontSize="small" />, label: '📝 Task Received', color: 'default', bgColor: '#f5f5f5' };
+      case 'notice':
+        return { icon: <ResultIcon fontSize="small" />, label: '📢 Notice', color: 'warning', bgColor: '#fff3e0' };
+      // Legacy kinds from old implementation
       case 'plan':
         return { icon: <PlanIcon fontSize="small" />, label: '📋 Planning', color: 'primary', bgColor: '#e3f2fd' };
       case 'progress':
@@ -327,22 +388,10 @@ function App() {
     }
   };
 
-  // Helper: Extract agent name from orchestrator content (if delegating)
-  const extractDelegatedAgent = (content) => {
-    const agentPatterns = [
-      /crm_billing|billing|CRM|account/i,
-      /product_promotions|promotion|product/i,
-      /security_authentication|security|auth/i,
-    ];
-    const agentNames = ['💳 Billing Agent', '🎁 Promotions Agent', '🔒 Security Agent'];
-    
-    for (let i = 0; i < agentPatterns.length; i++) {
-      if (agentPatterns[i].test(content)) {
-        return agentNames[i];
-      }
-    }
-    return null;
-  };
+  // Note: Agent Framework limitation - MagenticOrchestratorMessageEvent does not expose
+  // the target agent (next_speaker) in streaming callbacks. The progress ledger's
+  // next_speaker field is used internally but not passed to message_callback.
+  // Without a generalizable way to determine delegation targets, we omit this display.
 
   // Helper: Get creative emoji for agent
   const getAgentEmoji = (agentId) => {
@@ -391,7 +440,6 @@ function App() {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {orchestratorEvents.map((event, idx) => {
                       const display = getOrchestratorDisplay(event.kind);
-                      const delegatedAgent = extractDelegatedAgent(event.content);
                       
                       return (
                         <Card key={idx} variant="outlined" sx={{ bgcolor: display.bgColor }}>
@@ -403,14 +451,6 @@ function App() {
                                 size="small"
                                 color={display.color}
                               />
-                              {delegatedAgent && (
-                                <Chip
-                                  label={`→ ${delegatedAgent}`}
-                                  size="small"
-                                  variant="outlined"
-                                  color="secondary"
-                                />
-                              )}
                             </Box>
                             <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
                               {event.content}
@@ -425,7 +465,9 @@ function App() {
             )}
 
             {/* Agent Events */}
-            {Object.entries(agentEvents).map(([agentId, agentData]) => {
+            {Object.entries(agentEvents)
+              .filter(([agentId, agentData]) => agentData.showMessageInInternalProcess !== false) // Convention: only show if agent wants it
+              .map(([agentId, agentData]) => {
               const agentEmoji = getAgentEmoji(agentId);
               return (
                 <Accordion key={agentId} defaultExpanded={!agentData.complete}>
@@ -442,6 +484,31 @@ function App() {
                     </Typography>
                   </AccordionSummary>
                   <AccordionDetails>
+                    {/* Show tools called by this agent, grouped by turn */}
+                    {agentData.toolCallsByTurn && Object.keys(agentData.toolCallsByTurn).length > 0 && (
+                      <Box sx={{ mb: 1 }}>
+                        {Object.entries(agentData.toolCallsByTurn)
+                          .sort(([turnA], [turnB]) => Number(turnA) - Number(turnB))
+                          .map(([turn, tools]) => (
+                            <Box key={turn} sx={{ mb: 0.5 }}>
+                              <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                                Turn {turn}:
+                              </Typography>
+                              <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', ml: 1 }}>
+                                {tools.map((tool, idx) => (
+                                  <Chip
+                                    key={idx}
+                                    label={`🔧 ${tool}`}
+                                    size="small"
+                                    variant="outlined"
+                                    color="info"
+                                  />
+                                ))}
+                              </Box>
+                            </Box>
+                          ))}
+                      </Box>
+                    )}
                     <Card variant="outlined" sx={{ bgcolor: '#fff3e0' }}>
                       <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
                         <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
@@ -453,6 +520,47 @@ function App() {
                 </Accordion>
               );
             })}
+
+            {/* Tool Calls for agents that don't show messages in internal process */}
+            {Object.entries(agentEvents)
+              .filter(([agentId, agentData]) => 
+                agentData.showMessageInInternalProcess === false && 
+                agentData.toolCallsByTurn && 
+                Object.keys(agentData.toolCallsByTurn).length > 0
+              )
+              .map(([agentId, agentData]) => (
+              <Accordion key={agentId} defaultExpanded>
+                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                  <Typography sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    🔧 Tool Calls
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box>
+                    {Object.entries(agentData.toolCallsByTurn)
+                      .sort(([turnA], [turnB]) => Number(turnA) - Number(turnB))
+                      .map(([turn, tools]) => (
+                        <Box key={turn} sx={{ mb: 1 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mb: 0.5 }}>
+                            Turn {turn}:
+                          </Typography>
+                          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', ml: 1 }}>
+                            {tools.map((tool, idx) => (
+                              <Chip
+                                key={idx}
+                                label={`🔧 ${tool}`}
+                                size="small"
+                                variant="outlined"
+                                color="info"
+                              />
+                            ))}
+                          </Box>
+                        </Box>
+                      ))}
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            ))}
 
             <div ref={processEndRef} />
           </Box>

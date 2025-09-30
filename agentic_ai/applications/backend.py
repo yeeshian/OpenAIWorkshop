@@ -15,6 +15,7 @@ from collections import defaultdict
   
 import uvicorn  
 from fastapi import FastAPI  
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel  
 from dotenv import load_dotenv  
 from fastapi import FastAPI, Depends, Header, WebSocket, WebSocketDisconnect
@@ -77,7 +78,16 @@ STATE_STORE = get_state_store()  # either dict or CosmosDBStateStore
 # ------------------------------------------------------------------  
 # FastAPI app  
 # ------------------------------------------------------------------  
-app = FastAPI()  
+app = FastAPI()
+
+# Add CORS middleware to handle preflight OPTIONS requests from React frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # React dev server
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
 # ---------------------------------------------------------------
 # WebSocket connection manager (per session broadcast)
@@ -145,8 +155,8 @@ async def reset_session(req: SessionResetRequest, token: str = Depends(verify_to
         del STATE_STORE[req.session_id]  
     hist_key = f"{req.session_id}_chat_history"  
     if hist_key in STATE_STORE:  
-        del STATE_STORE[hist_key]  
-   
+        del STATE_STORE[hist_key]
+    return {"status": "success", "message": "Session reset successfully"}
 
 @app.get("/history/{session_id}", response_model=ConversationHistoryResponse)  
 async def get_conversation_history(session_id: str, token: str = Depends(verify_token)):  
@@ -207,10 +217,13 @@ async def ws_chat(ws: WebSocket):
                         if evt and evt.get("type") in ("token", "message", "final"):
                             await MANAGER.broadcast(session_id, evt)
                 elif hasattr(agent, "chat_async"):
-                    # Agent Framework (magentic) - events sent via callback
-                    # All events including final result are sent via streaming callback
+                    # Agent Framework - may or may not use streaming callback
                     result = await agent.chat_async(prompt)
-                    # Don't send duplicate final result - already sent by callback
+                    # If agent has _ws_manager attribute, it supports streaming and events sent via callback
+                    # Otherwise, broadcast final result here
+                    if not hasattr(agent, "_ws_manager"):
+                        await MANAGER.broadcast(session_id, {"type": "final_result", "content": result})
+                    # Else: events including final result are sent via streaming callback
                 else:
                     await MANAGER.broadcast(session_id, {"type": "error", "message": "Agent does not support streaming"})
 
@@ -268,7 +281,6 @@ async def serialize_autogen_event(event: Any) -> Optional[dict]:
         if isinstance(event, StructuredMessage):
             return {"type": "structured", "content": getattr(event, "content", {})}
         if isinstance(event, Response):
-            print("final response message", event.content)
 
             # Final assistant message in Response.chat_message
             msg = event.chat_message

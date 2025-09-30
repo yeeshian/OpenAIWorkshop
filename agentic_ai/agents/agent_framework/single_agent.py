@@ -19,6 +19,15 @@ class Agent(BaseAgent):
         self._thread: AgentThread | None = None
         self._initialized = False
         self._access_token = access_token
+        self._ws_manager = None  # WebSocket manager for streaming
+        # Track conversation turn for tool call grouping - load from state store
+        self._turn_key = f"{session_id}_current_turn"
+        self._current_turn = state_store.get(self._turn_key, 0)
+
+    def set_websocket_manager(self, manager: Any) -> None:
+        """Allow backend to inject WebSocket manager for streaming events."""
+        self._ws_manager = manager
+        logger.info(f"[STREAMING] WebSocket manager set for single_agent, session_id={self.session_id}")
 
     async def _setup_single_agent(self) -> None:
         if self._initialized:
@@ -94,8 +103,8 @@ class Agent(BaseAgent):
         return [tool]
 
     async def _log_mcp_tool_details(self) -> None:
-        # if not self._agent:
-        #     return
+        if not self._agent:
+            return
 
         mcp_tools = getattr(self._agent, "_local_mcp_tools", None)
         if not mcp_tools:
@@ -104,7 +113,6 @@ class Agent(BaseAgent):
 
         mcp_tool = mcp_tools[0]
         session = getattr(mcp_tool, "session", None)
-        print("session ", session)
         if session is None:
             logger.debug("MCP tool session is not available; cannot list tools for debugging.")
             return
@@ -119,34 +127,101 @@ class Agent(BaseAgent):
             logger.debug("No tools returned from MCP server during inspection.")
             return
 
-        for tool_info in tool_list.tools:
-            print(tool_info)
-            if tool_info.name == "get_customer_detail":
-                try:
-                    serialized = tool_info.model_dump()
-                except Exception:
-                    serialized = {
-                        "name": tool_info.name,
-                        "description": getattr(tool_info, "description", ""),
-                        "inputSchema": getattr(tool_info, "inputSchema", {}),
-                    }
-
-                logger.debug(
-                    "MCP tool 'get_customer_detail' metadata: %s",
-                    json.dumps(serialized, indent=2, sort_keys=True),
-                )
-                break
-        else:
-            logger.debug("MCP tool 'get_customer_detail' not found in server tool list.")
-
     async def chat_async(self, prompt: str) -> str:
         await self._setup_single_agent()
 
         if not self._agent or not self._thread:
             raise RuntimeError("Agent Framework single agent failed to initialize correctly.")
 
+        # Increment turn counter for this new conversation turn and persist to state store
+        self._current_turn += 1
+        self.state_store[self._turn_key] = self._current_turn
+
+        # Use streaming if WebSocket manager is available
+        if self._ws_manager:
+            return await self._chat_async_streaming(prompt)
+        
+        # Non-streaming path
         response = await self._agent.run(prompt, thread=self._thread)
         assistant_response = response.text
+
+        messages = [
+            {"role": "user", "content": prompt},
+            {"role": "assistant", "content": assistant_response},
+        ]
+        self.append_to_chat_history(messages)
+
+        new_state = await self._thread.serialize()
+        self._setstate(new_state)
+
+        return assistant_response
+
+    async def _chat_async_streaming(self, prompt: str) -> str:
+        """Handle chat with streaming support via WebSocket."""
+        if not self._agent or not self._thread:
+            raise RuntimeError("Agent Framework single agent failed to initialize correctly.")
+
+        # Notify UI that agent started - with convention flag
+        if self._ws_manager:
+            await self._ws_manager.broadcast(
+                self.session_id,
+                {
+                    "type": "agent_start",
+                    "agent_id": "single_agent",
+                    "show_message_in_internal_process": False,  # Convention: don't show message in left panel
+                },
+            )
+
+        # Stream the response
+        full_response = []
+        
+        try:
+            async for chunk in self._agent.run_stream(prompt, thread=self._thread):
+                # Process contents in the chunk
+                if hasattr(chunk, 'contents') and chunk.contents:
+                    for content in chunk.contents:
+                        # Check for tool/function calls - only broadcast the tool name
+                        if content.type == "function_call":
+                            if self._ws_manager:
+                                await self._ws_manager.broadcast(
+                                    self.session_id,
+                                    {
+                                        "type": "tool_called",
+                                        "agent_id": "single_agent",
+                                        "tool_name": content.name,
+                                        "turn": self._current_turn,
+                                    },
+                                )
+                
+                # Extract text from chunk
+                if hasattr(chunk, 'text') and chunk.text:
+                    full_response.append(chunk.text)
+                    
+                    # Broadcast token to WebSocket
+                    if self._ws_manager:
+                        await self._ws_manager.broadcast(
+                            self.session_id,
+                            {
+                                "type": "agent_token",
+                                "agent_id": "single_agent",
+                                "content": chunk.text,
+                            },
+                        )
+        except Exception as exc:
+            logger.error("[STREAMING] Error during single agent streaming: %s", exc, exc_info=True)
+            raise
+
+        assistant_response = ''.join(full_response)
+
+        # Send final result
+        if self._ws_manager:
+            await self._ws_manager.broadcast(
+                self.session_id,
+                {
+                    "type": "final_result",
+                    "content": assistant_response,
+                },
+            )
 
         messages = [
             {"role": "user", "content": prompt},

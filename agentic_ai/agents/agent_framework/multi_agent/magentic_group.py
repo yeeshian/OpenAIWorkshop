@@ -109,15 +109,80 @@ class Agent(BaseAgent):
     """Agent Framework implementation of the collaborative Magentic team."""
 
     DEFAULT_MANAGER_INSTRUCTIONS = (
-        "You are the Analysis & Planning orchestrator for a team of specialists handling Contoso customer support. "
-        "Break down the user's needs, decide which specialist should respond, and integrate their findings into the final answer. "
+        "You are the Analysis & Planning orchestrator for a team of internal specialists handling Contoso customer support. "
+        "**CRITICAL: You are the ONLY agent that communicates directly with the customer. Specialists communicate only with YOU.** "
+        "Break down the user's needs, decide which specialist should respond, and integrate their findings into the final customer-facing answer. "
         "**IMPORTANT: Instruct participants to use their tools to retrieve factual data. Do not allow speculative or hallucinated answers.** "
-        "Each participant MUST call the appropriate tool and cite the tool results (with IDs, timestamps, or specific data points) in their response. "
-        "If no tool can answer the question, the participant should explicitly state this limitation. "
-        "After gathering sufficient information from specialists (typically 1-3 rounds), synthesize their responses and "
-        "deliver the final customer response prefixed with 'FINAL_ANSWER:'. "
-        "**DO NOT loop indefinitely - once you have tool-backed answers from the relevant specialists, conclude with FINAL_ANSWER.**"
+        "Each participant MUST call the appropriate tool and cite the tool results (with IDs, timestamps, or specific data points) in their response to you. "
+        "**If a specialist reports they need more information from the user (like customer ID, account details, etc.), "
+        "YOU must translate that into a polite customer-facing request and deliver it as FINAL_ANSWER immediately - do NOT loop or wait.** "
+        "After gathering sufficient information from specialists (typically 1-3 rounds), synthesize their responses into "
+        "a clear, customer-friendly answer and deliver it prefixed with 'FINAL_ANSWER:'. "
+        "**DO NOT loop indefinitely - once you have tool-backed answers OR a request for user information, conclude with FINAL_ANSWER.**"
     )
+
+    CUSTOM_PROGRESS_LEDGER_PROMPT = """
+Recall we are working on the following request:
+
+{task}
+
+And we have assembled the following team:
+
+{team}
+
+To make progress on the request, please answer the following questions, including necessary reasoning:
+
+    - Is the request fully satisfied? (True if EITHER:
+      a) The original request has been SUCCESSFULLY and FULLY addressed with factual, tool-backed answers, OR
+      b) We need additional information or clarification from the user that we cannot obtain ourselves
+      (e.g., customer ID, account number, email, phone, personal preferences, missing context that only the user can provide).
+      
+      False if the original request has NOT been addressed AND we have all the information we need to continue working.)
+      
+    - Are we in a loop where we are repeating the same requests and or getting the same responses as before?
+      Loops can span multiple turns, and can include repeated actions. NOTE: If specialists say they "need customer ID"
+      or similar user information, that is NOT a loop - it means we should complete with a request to the user
+      (is_request_satisfied=True).
+      
+    - Are we making forward progress? (True if just starting, or recent messages are adding value or identifying needed
+      information. False if recent messages show evidence of being stuck in a loop or if there is evidence of significant
+      barriers to success. NOTE: Specialists identifying that they need user information IS forward progress - they've
+      determined what's needed to proceed.)
+      
+    - Who should speak next? (select from: {names}. NOTE: If is_request_satisfied is True because we need user
+      input, this field is ignored but you must still provide a valid name from the list.)
+      
+    - What instruction or question would you give this team member? (If is_request_satisfied is True because we
+      need user input, phrase this as a polite, customer-facing question asking for the missing information.
+      Otherwise, phrase as if speaking directly to the specialist team member, and include any specific information
+      they may need to complete their task.)
+
+Please output an answer in pure JSON format according to the following schema. The JSON object must be parsable as-is.
+DO NOT OUTPUT ANYTHING OTHER THAN JSON, AND DO NOT DEVIATE FROM THIS SCHEMA:
+
+{{
+    "is_request_satisfied": {{
+        "reason": string (explain whether we have a complete answer OR need user input to proceed),
+        "answer": boolean
+    }},
+    "is_in_loop": {{
+        "reason": string,
+        "answer": boolean
+    }},
+    "is_progress_being_made": {{
+        "reason": string,
+        "answer": boolean
+    }},
+    "next_speaker": {{
+        "reason": string,
+        "answer": string (select from: {names})
+    }},
+    "instruction_or_question": {{
+        "reason": string,
+        "answer": string (if is_request_satisfied=True and we need user input, phrase this as a polite user-facing question)
+    }}
+}}
+"""
 
     def __init__(
         self,
@@ -161,6 +226,7 @@ class Agent(BaseAgent):
         self._ws_manager = None  # Will be set from backend if available
         self._stream_agent_id: Optional[str] = None
         self._stream_line_open: bool = False
+        self._last_agent_message: Optional[str] = None  # Track last agent message for deduplication
 
     def set_websocket_manager(self, manager: Any) -> None:
         """Allow backend to inject WebSocket manager for streaming events."""
@@ -189,6 +255,7 @@ class Agent(BaseAgent):
         workflow = await self._build_workflow(participant_client, manager_client, tools, checkpoint_storage)
 
         final_answer = await self._run_workflow(workflow, checkpoint_storage, task)
+        print("raw final answer", final_answer)
         if final_answer is None:
             logger.warning(
                 "[AgentFramework-Magentic] No final answer produced; leaving checkpoint for potential resume."
@@ -375,6 +442,7 @@ class Agent(BaseAgent):
                 max_round_count=self._max_round_count,
                 max_stall_count=self._max_stall_count,
                 max_reset_count=self._max_reset_count,
+                progress_ledger_prompt=self.CUSTOM_PROGRESS_LEDGER_PROMPT,
             )
             .with_checkpointing(checkpoint_storage)
         )
@@ -412,14 +480,18 @@ class Agent(BaseAgent):
                     "Agent specializing in customer account, subscription, billing inquiries, invoices, payments, and related policy checks."
                 ),
                 "instructions": (
-                    "You are the CRM & Billing Agent.\n"
+                    "You are the CRM & Billing **internal specialist**.\n"
+                    "**CRITICAL: You communicate ONLY with the orchestrator, NOT directly with the customer.**\n"
                     "**CRITICAL: You MUST use your tools to retrieve factual data. NEVER guess or hallucinate information.**\n"
                     "- For ANY customer-specific question, call the appropriate tool (get_customer_detail, get_billing_summary, etc.).\n"
+                    "- If you don't have necessary identifiers (customer ID, email, phone), inform the orchestrator: "
+                    "'I need the customer ID, email, or phone number to retrieve this information.'\n"
                     "- Query structured CRM / billing systems for account, subscription, invoice, and payment information.\n"
                     "- Cross-check Knowledge Base articles on billing policies, payment processing, refund rules, and compliance.\n"
-                    "- Reply with concise, structured information and flag any policy concerns you detect.\n"
+                    "- Reply to the orchestrator with concise, structured information and flag any policy concerns you detect.\n"
                     "- Explicitly cite the tool results (customer ID, invoice numbers, amounts, timestamps) that back your answer.\n"
-                    "- If no tool can answer the question, state 'I cannot answer this without the appropriate tool' instead of guessing."
+                    "- If no tool can answer the question, state 'I cannot answer this without the appropriate tool' instead of guessing.\n"
+                    "**Remember: The orchestrator will translate your response into customer-friendly language. Focus on accuracy and completeness.**"
                 ),
             },
             "product_promotions": {
@@ -428,13 +500,17 @@ class Agent(BaseAgent):
                     "Agent for retrieving and explaining product availability, promotions, discounts, eligibility, and terms."
                 ),
                 "instructions": (
-                    "You are the Product & Promotions Agent.\n"
+                    "You are the Product & Promotions **internal specialist**.\n"
+                    "**CRITICAL: You communicate ONLY with the orchestrator, NOT directly with the customer.**\n"
                     "**CRITICAL: You MUST use your tools to retrieve factual data. NEVER guess or hallucinate information.**\n"
                     "- For ANY product or promotion question, call the appropriate tool (get_products, get_promotions, get_eligible_promotions, etc.).\n"
+                    "- If you need more information (customer ID for eligibility, product category, etc.), inform the orchestrator: "
+                    "'I need the customer ID to check promotion eligibility.'\n"
                     "- Retrieve promotional offers, product availability, eligibility criteria, and discount information from structured sources.\n"
                     "- Cross-reference Knowledge Base FAQs, terms & conditions, and best practices in every response.\n"
-                    "- Provide factual, up-to-date product/promo details, and cite the tool outputs or documents you referenced.\n"
-                    "- If no tool can answer the question, state 'I cannot answer this without the appropriate tool' instead of guessing."
+                    "- Provide factual, up-to-date product/promo details to the orchestrator, citing the tool outputs or documents you referenced.\n"
+                    "- If no tool can answer the question, state 'I cannot answer this without the appropriate tool' instead of guessing.\n"
+                    "**Remember: The orchestrator will translate your response into customer-friendly language. Focus on accuracy and completeness.**"
                 ),
             },
             "security_authentication": {
@@ -443,9 +519,12 @@ class Agent(BaseAgent):
                     "Agent focusing on security incidents, authentication issues, lockouts, and risk mitigation guidance."
                 ),
                 "instructions": (
-                    "You are the Security & Authentication Agent.\n"
+                    "You are the Security & Authentication **internal specialist**.\n"
+                    "**CRITICAL: You communicate ONLY with the orchestrator, NOT directly with the customer.**\n"
                     "**CRITICAL: You MUST use your tools to retrieve factual data. NEVER guess or hallucinate information.**\n"
                     "- For ANY security or authentication question, call the appropriate tool (get_security_logs, unlock_account, etc.).\n"
+                    "- If you need more information (customer ID, account details, etc.), inform the orchestrator: "
+                    "'I need the customer ID to retrieve security logs.'\n"
                     "- Investigate authentication logs, account lockouts, and security incidents using your tools.\n"
                     "- Always cross-reference Knowledge Base security policies and troubleshooting guides.\n"
                     "- Return clear risk assessments, list the log entries or tool findings you relied on, and recommend remediation steps grounded in those outputs.\n"
@@ -558,17 +637,31 @@ class Agent(BaseAgent):
                         {
                             "type": "agent_start",
                             "agent_id": event.agent_id,
+                            "show_message_in_internal_process": True,  # Convention: show full agent details
                         },
                     )
 
-                await self._ws_manager.broadcast(
-                    self.session_id,
-                    {
-                        "type": "agent_token",
-                        "agent_id": event.agent_id,
-                        "content": event.text,
-                    },
-                )
+                # Check for tool/function calls in the delta event
+                if event.function_call_name:
+                    await self._ws_manager.broadcast(
+                        self.session_id,
+                        {
+                            "type": "tool_called",
+                            "agent_id": event.agent_id,
+                            "tool_name": event.function_call_name,
+                        },
+                    )
+
+                # Stream text tokens
+                if event.text:
+                    await self._ws_manager.broadcast(
+                        self.session_id,
+                        {
+                            "type": "agent_token",
+                            "agent_id": event.agent_id,
+                            "content": event.text,
+                        },
+                    )
 
             elif isinstance(event, MagenticAgentMessageEvent):
                 # Complete message from participant
@@ -597,13 +690,16 @@ class Agent(BaseAgent):
                 # Final workflow result - skip if identical to last agent message
                 final_text = getattr(event.message, "text", "") if event.message else ""
                 
+                # Sanitize the final text to remove FINAL_ANSWER prefix
+                cleaned_final_text = self._sanitize_final_answer(final_text) or final_text
+                
                 # Only send if different from the last agent message
                 if final_text != self._last_agent_message:
                     await self._ws_manager.broadcast(
                         self.session_id,
                         {
                             "type": "final_result",
-                            "content": final_text,
+                            "content": cleaned_final_text,
                         },
                     )
                 else:
@@ -633,23 +729,17 @@ class Agent(BaseAgent):
         return "\n".join(formatted_turns)
 
     def _sanitize_final_answer(self, final_answer: Optional[str]) -> Optional[str]:
-        if final_answer is None:
+        """Remove FINAL_ANSWER prefix from workflow output."""
+        if not final_answer:
             return None
 
-        marker = "FINAL_ANSWER:"
-        if marker in final_answer:
-            return final_answer.split(marker, maxsplit=1)[-1].strip()
+        # Try all known marker variations
+        for marker in ["FINAL_ANSWER:", "FINAL ANSWER:", "FINALANSWER:"]:
+            if marker in final_answer:
+                return final_answer.split(marker, maxsplit=1)[-1].strip()
 
-        alternate_markers = ["FINAL ANSWER:", "FINALANSWER:"]
-        for alt in alternate_markers:
-            if alt in final_answer:
-                return final_answer.split(alt, maxsplit=1)[-1].strip()
-
-        logger.warning(
-            "[AgentFramework-Magentic] Manager response missing FINAL_ANSWER prefix; returning raw text."
-        )
-        stripped = final_answer.strip()
-        return stripped or None
+        # No marker found - return cleaned text
+        return final_answer.strip() or None
 
     def _create_checkpoint_storage(self, checkpoint_state: Dict[str, Any]) -> CheckpointStorage:
         if self._checkpoint_storage_override:
@@ -764,68 +854,57 @@ class Agent(BaseAgent):
 
         return env_config
 
+    @staticmethod
+    async def _call_maybe_async(fn: Any, *args: Any, **kwargs: Any) -> Any:
+        """Call a function that might be sync or async."""
+        result = fn(*args, **kwargs)
+        return await result if inspect.isawaitable(result) else result
+
     def _maybe_parse_int(self, value: Optional[str]) -> Optional[int]:
-        if value is None:
+        """Parse string to int, return None if invalid."""
+        if not value:
             return None
         try:
             return int(value)
         except ValueError:
-            logger.warning(
-                "[AgentFramework-Magentic] Expected integer value but received '%s'; ignoring.",
-                value,
-            )
             return None
 
     def _maybe_parse_bool(self, value: Optional[str]) -> Optional[bool]:
-        if value is None:
+        """Parse string to bool, return None if invalid."""
+        if not value:
             return None
-
-        value_normalised = value.strip().lower()
-        if value_normalised in {"1", "true", "yes", "y", "on"}:
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "y", "on"}:
             return True
-        if value_normalised in {"0", "false", "no", "n", "off"}:
+        if normalized in {"0", "false", "no", "n", "off"}:
             return False
-
-        logger.warning(
-            "[AgentFramework-Magentic] Expected boolean value but received '%s'; ignoring.",
-            value,
-        )
         return None
 
     async def _mark_pending_prompt(self, storage: CheckpointStorage, prompt: str) -> None:
+        """Mark a pending prompt in storage."""
         self.state_store[self._pending_prompt_state_key] = prompt
         mark_fn = getattr(storage, "mark_pending_prompt", None)
         if callable(mark_fn):
             try:
-                result = mark_fn(prompt)
-                if inspect.isawaitable(result):
-                    await result
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.debug(
-                    "[AgentFramework-Magentic] Failed to mark pending prompt on checkpoint storage: %s",
-                    exc,
-                    exc_info=True,
-                )
+                await self._call_maybe_async(mark_fn, prompt)
+            except Exception as exc:
+                logger.debug("Failed to mark pending prompt: %s", exc)
 
     async def _consume_pending_prompt(self, storage: CheckpointStorage) -> Optional[str]:
+        """Consume and return pending prompt from storage."""
         stored_prompt = self.state_store.get(self._pending_prompt_state_key)
-        storage_prompt: Optional[str] = None
-
+        storage_prompt = None
+        
         consume_fn = getattr(storage, "consume_pending_prompt", None)
         if callable(consume_fn):
             try:
-                result = consume_fn()
-                storage_prompt = await result if inspect.isawaitable(result) else result
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.debug(
-                    "[AgentFramework-Magentic] Failed to consume pending prompt from checkpoint storage: %s",
-                    exc,
-                    exc_info=True,
-                )
+                storage_prompt = await self._call_maybe_async(consume_fn)
+            except Exception as exc:
+                logger.debug("Failed to consume pending prompt: %s", exc)
 
-        if stored_prompt is not None or storage_prompt is not None:
+        if stored_prompt or storage_prompt:
             self.state_store.pop(self._pending_prompt_state_key, None)
-
+        
         return storage_prompt or stored_prompt
 
     async def _reset_checkpoint_progress(self, storage: CheckpointStorage) -> None:
@@ -833,97 +912,69 @@ class Agent(BaseAgent):
         self.state_store.pop(self._pending_prompt_state_key, None)
 
     async def _purge_checkpoint_storage(self, storage: CheckpointStorage) -> None:
+        """Delete all checkpoints from storage."""
+        # Try clear_all first
         clear_fn = getattr(storage, "clear_all", None)
         if callable(clear_fn):
             try:
-                result = clear_fn()
-                if inspect.isawaitable(result):
-                    await result
+                await self._call_maybe_async(clear_fn)
                 return
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.debug(
-                    "[AgentFramework-Magentic] clear_all on checkpoint storage failed: %s",
-                    exc,
-                    exc_info=True,
-                )
+            except Exception as exc:
+                logger.debug("clear_all failed: %s", exc)
 
+        # Fallback: list and delete individually
         list_fn = getattr(storage, "list_checkpoint_ids", None)
         delete_fn = getattr(storage, "delete_checkpoint", None)
-        if callable(list_fn) and callable(delete_fn):
-            try:
-                checkpoint_ids = list_fn()
-                checkpoint_ids = await checkpoint_ids if inspect.isawaitable(checkpoint_ids) else checkpoint_ids
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.debug(
-                    "[AgentFramework-Magentic] Unable to enumerate checkpoints for purge: %s",
-                    exc,
-                    exc_info=True,
-                )
-                return
+        if not (callable(list_fn) and callable(delete_fn)):
+            return
 
+        try:
+            checkpoint_ids = await self._call_maybe_async(list_fn)
             if checkpoint_ids:
                 for checkpoint_id in checkpoint_ids:
                     try:
-                        delete_result = delete_fn(checkpoint_id)
-                        if inspect.isawaitable(delete_result):
-                            await delete_result
-                    except Exception as exc:  # pragma: no cover - defensive
-                        logger.debug(
-                            "[AgentFramework-Magentic] Failed to delete checkpoint %s: %s",
-                            checkpoint_id,
-                            exc,
-                            exc_info=True,
-                        )
+                        await self._call_maybe_async(delete_fn, checkpoint_id)
+                    except Exception as exc:
+                        logger.debug("Failed to delete checkpoint %s: %s", checkpoint_id, exc)
+        except Exception as exc:
+            logger.debug("Unable to enumerate checkpoints: %s", exc)
 
     async def _get_latest_checkpoint_id(self, storage: CheckpointStorage) -> Optional[str]:
+        """Get the most recent checkpoint ID from storage."""
+        # Try latest_checkpoint_id property/method first
         latest_id_attr = getattr(storage, "latest_checkpoint_id", None)
-        latest_id: Optional[str]
-
         if callable(latest_id_attr):
             try:
-                result = latest_id_attr()
-                latest_id = await result if inspect.isawaitable(result) else result
+                latest_id = await self._call_maybe_async(latest_id_attr)
+                if isinstance(latest_id, str):
+                    return latest_id
             except Exception:
-                latest_id = None
-        else:
-            latest_id = latest_id_attr  # type: ignore[assignment]
+                pass
+        elif isinstance(latest_id_attr, str):
+            return latest_id_attr
 
-        if isinstance(latest_id, str):
-            return latest_id
-
+        # Try list_checkpoints and get latest
         list_checkpoints_fn = getattr(storage, "list_checkpoints", None)
         if callable(list_checkpoints_fn):
             try:
-                checkpoints = list_checkpoints_fn()
-                checkpoints = await checkpoints if inspect.isawaitable(checkpoints) else checkpoints
+                checkpoints = await self._call_maybe_async(list_checkpoints_fn)
                 if checkpoints:
-                    checkpoints = sorted(
-                        checkpoints,
-                        key=lambda cp: (
-                            getattr(cp, "timestamp", ""),
-                            getattr(cp, "iteration_count", 0),
-                        ),
-                    )
-                    return checkpoints[-1].checkpoint_id
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.debug(
-                    "[AgentFramework-Magentic] Unable to determine latest checkpoint via list_checkpoints: %s",
-                    exc,
-                    exc_info=True,
-                )
+                    latest = max(checkpoints, key=lambda cp: (
+                        getattr(cp, "timestamp", ""),
+                        getattr(cp, "iteration_count", 0),
+                    ))
+                    return latest.checkpoint_id
+            except Exception:
+                pass
 
+        # Fallback: list checkpoint IDs and return last
         list_ids_fn = getattr(storage, "list_checkpoint_ids", None)
         if callable(list_ids_fn):
             try:
-                checkpoint_ids = list_ids_fn()
-                checkpoint_ids = await checkpoint_ids if inspect.isawaitable(checkpoint_ids) else checkpoint_ids
+                checkpoint_ids = await self._call_maybe_async(list_ids_fn)
                 if checkpoint_ids:
                     return checkpoint_ids[-1]
-            except Exception as exc:  # pragma: no cover - defensive
-                logger.debug(
-                    "[AgentFramework-Magentic] Unable to determine latest checkpoint via list_checkpoint_ids: %s",
-                    exc,
-                    exc_info=True,
-                )
+            except Exception:
+                pass
 
         return None
