@@ -13,37 +13,63 @@ Open VS Code terminal
 git clone <repo_url> # from folder where you want clone to reside
 ```
 ### 2. Install Python dependencies  
-  
-It is recommended to use a virtual environment.  
+
+#### ⚡ Recommended: Use `uv` for fastest setup
+
+[**uv**](https://github.com/astral-sh/uv) is a blazing-fast Python package installer and resolver written in Rust. It's 10-100x faster than `pip` and automatically manages virtual environments.
+
+**Install uv:**
+```bash
+# Windows (PowerShell)
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**Setup dependencies with uv:**
+```bash
+# Navigate to the applications directory
+cd agentic_ai/applications
+
+# Create virtual environment and install all dependencies in one command
+uv sync
+
+# uv automatically creates .venv and installs dependencies from pyproject.toml
+```
+
+**Run commands with uv:**
+```bash
+# Run Python scripts without manual venv activation
+uv run python backend.py
+uv run streamlit run frontend.py
+
+# Or activate the venv manually if you prefer
+# Windows:
+.venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+```
+
+#### Alternative: Traditional pip/venv approach
+
+If you prefer the traditional approach or don't want to install `uv`:
 
 ```bash 
-# Creating and activating virtual environment on Mac 
+# Creating and activating virtual environment on macOS/Linux
 python -m venv venv
 source venv/bin/activate
 ```
-```sh
+```cmd
 # Creating and activating virtual environment on Windows
 python -m venv venv
 venv\Scripts\activate
 ```
-```sh
-# Install dependencies from `agentic_ai\applications`
+```bash
+# Install dependencies from `agentic_ai/applications`
+cd agentic_ai/applications
 pip install -r requirements.txt  
 ```
-
-#### Prefer `uv` for faster installs?
-
-If you use [uv](https://github.com/astral-sh/uv) you can skip manual virtualenv activation and let uv manage it for you:
-
-```bash
-# Create (or reuse) .venv and sync dependencies
-uv sync --project agentic_ai/applications
-
-# Alternatively, install packages into the active environment
-uv pip install -r agentic_ai/applications/requirements.txt
-```
-
-> `uv` automatically creates a `.venv` in the project root when you run `uv sync`. Activate it with `uv venv --activate` or by sourcing `.venv/bin/activate` (Unix) / `.venv\Scripts\activate` (Windows).
 
 #### Example `requirements.txt` includes:  
   
@@ -215,16 +241,24 @@ MAGENTIC_MAX_ROUNDS=10
   
 ### 5. Run MCP Server 
 
-Navigate to ```agentic_ai/backend_services``` folder, and in terminal window with virtual environment activated, run MCP server
+Navigate to the `mcp` folder and start the MCP server:
 
+**With uv (recommended):**
 ```bash
-python mcp_service.py  
-# Keep this terminal open; open another terminal for the next step.  
+cd mcp
+uv run python mcp_service.py
+# Keep this terminal open; open another terminal for the next step.
+```
 
+**Alternative (traditional approach):**
+```bash
+cd mcp
+# Make sure your virtual environment is activated
+python mcp_service.py
+# Keep this terminal open; open another terminal for the next step.
 ```
 
 ### 6. Run application  
-Navigate to ```agentic_ai/applications```
 
 The common backend application runs the agent selected in the .env file and connects to the frontend UI.
 
@@ -244,9 +278,18 @@ The React frontend provides **advanced streaming visualization** ideal for:
 #### Running with React:
 
 **Terminal 1 - Start Backend:**
+
+*With uv (recommended):*
 ```bash
 cd agentic_ai/applications
-python backend.py
+uv run python backend.py
+# Backend runs on http://localhost:7000 with WebSocket support
+```
+
+*Alternative (traditional):*
+```bash
+cd agentic_ai/applications
+python backend.py  # venv must be activated
 # Backend runs on http://localhost:7000 with WebSocket support
 ```
 
@@ -272,10 +315,19 @@ The Streamlit frontend provides a **clean, simple chat interface** ideal for:
 #### Running with Streamlit:
 
 **Option B1: Run Both Backend and Frontend Together**
+
+*With uv (recommended):*
 ```bash  
 cd agentic_ai/applications
-bash run_application.sh  
+uv run bash run_application.sh  
 ```
+
+*Alternative (traditional):*
+```bash  
+cd agentic_ai/applications
+bash run_application.sh  # venv must be activated
+```
+
 This script starts both FastAPI backend and Streamlit frontend simultaneously.
 - Backend: [http://localhost:7000](http://localhost:7000)
 - Streamlit: [http://localhost:8501](http://localhost:8501)
@@ -283,15 +335,31 @@ This script starts both FastAPI backend and Streamlit frontend simultaneously.
 **Option B2: Run Backend and Frontend Separately**
 
 **Terminal 1 - Start Backend:**
+
+*With uv (recommended):*
 ```bash  
 cd agentic_ai/applications
-python backend.py  
+uv run python backend.py  
+```
+
+*Alternative (traditional):*
+```bash  
+cd agentic_ai/applications
+python backend.py  # venv must be activated
 ```
 
 **Terminal 2 - Start Streamlit:**
+
+*With uv (recommended):*
 ```bash  
 cd agentic_ai/applications
-streamlit run frontend.py  
+uv run streamlit run frontend.py  
+```
+
+*Alternative (traditional):*
+```bash  
+cd agentic_ai/applications
+streamlit run frontend.py  # venv must be activated
 ```
 
 **Best for:** Simple agent testing, Autogen agents, quick demos
