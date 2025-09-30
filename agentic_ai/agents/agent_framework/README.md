@@ -4,66 +4,13 @@ This directory contains production-ready implementations of multi-agent patterns
 
 ## 📋 Table of Contents
 
-- [Quick Start](#quick-start)
 - [Available Patterns](#available-patterns)
 - [Architecture Overview](#architecture-overview)
 - [Documentation](#documentation)
 - [Configuration](#configuration)
 - [Choosing the Right Pattern](#choosing-the-right-pattern)
 
----
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-```bash
-# Install Agent Framework
-pip install agent-framework[all]
-
-# Or with uv
-uv pip install agent-framework[all]
-```
-
-### Basic Usage
-
-1. **Set environment variables** in `applications/.env`:
-
-```bash
-# Azure OpenAI Configuration
-AZURE_OPENAI_API_KEY=your_key
-AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
-AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4
-AZURE_OPENAI_API_VERSION=2024-02-15-preview
-OPENAI_MODEL_NAME=gpt-4
-
-# MCP Server (for tools)
-MCP_SERVER_URI=http://localhost:8000
-
-# Choose your agent pattern
-AGENT_MODULE=agents.agent_framework.single_agent
-```
-
-2. **Run the backend**:
-
-```bash
-cd agentic_ai/applications
-python backend.py
-```
-
-3. **Launch the frontend**:
-
-```bash
-# React (recommended for best experience)
-cd react-frontend
-npm install
-npm start
-
-# Or Streamlit
-streamlit run frontend.py
-```
-
----
 
 ## 🎯 Available Patterns
 
@@ -239,7 +186,6 @@ AZURE_OPENAI_API_KEY=your_key
 AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
 AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4
 AZURE_OPENAI_API_VERSION=2024-02-15-preview
-OPENAI_MODEL_NAME=gpt-4
 
 # MCP Server (for tools)
 MCP_SERVER_URI=http://localhost:8000
