@@ -186,19 +186,34 @@ async def ws_chat(ws: WebSocket):
             except TypeError:
                 agent = Agent(STATE_STORE, session_id)
 
-            async def progress_sink(ev: dict):
-                # Broadcast progress events
-                await MANAGER.broadcast(session_id, ev)
+            # Inject WebSocket manager for Magentic streaming
+            if hasattr(agent, "set_websocket_manager"):
+                agent.set_websocket_manager(MANAGER)
 
-            agent.set_progress_sink(progress_sink)
+            # Set progress sink if supported (for some agent types)
+            if hasattr(agent, "set_progress_sink"):
+                async def progress_sink(ev: dict):
+                    # Broadcast progress events
+                    await MANAGER.broadcast(session_id, ev)
+                agent.set_progress_sink(progress_sink)
 
-            # Stream events from Autogen
+            # Stream events from agent
             try:
-                async for event in agent.chat_stream(prompt):
-                    evt = await serialize_autogen_event(event)
-                    if evt and evt.get("type") in ("token", "message", "final"):
-                        # Only send streaming tokens and assistant messages
-                        await MANAGER.broadcast(session_id, evt)
+                # Check if agent supports streaming (Autogen or Agent Framework)
+                if hasattr(agent, "chat_stream"):
+                    # Autogen streaming
+                    async for event in agent.chat_stream(prompt):
+                        evt = await serialize_autogen_event(event)
+                        if evt and evt.get("type") in ("token", "message", "final"):
+                            await MANAGER.broadcast(session_id, evt)
+                elif hasattr(agent, "chat_async"):
+                    # Agent Framework (magentic) - events sent via callback
+                    # All events including final result are sent via streaming callback
+                    result = await agent.chat_async(prompt)
+                    # Don't send duplicate final result - already sent by callback
+                else:
+                    await MANAGER.broadcast(session_id, {"type": "error", "message": "Agent does not support streaming"})
+
                 await MANAGER.broadcast(session_id, {"type": "done"})
             except Exception as e:
                 await MANAGER.broadcast(session_id, {"type": "error", "message": str(e)})
