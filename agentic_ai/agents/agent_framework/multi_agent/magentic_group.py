@@ -255,7 +255,6 @@ DO NOT OUTPUT ANYTHING OTHER THAN JSON, AND DO NOT DEVIATE FROM THIS SCHEMA:
         workflow = await self._build_workflow(participant_client, manager_client, tools, checkpoint_storage)
 
         final_answer = await self._run_workflow(workflow, checkpoint_storage, task)
-        print("raw final answer", final_answer)
         if final_answer is None:
             logger.warning(
                 "[AgentFramework-Magentic] No final answer produced; leaving checkpoint for potential resume."
