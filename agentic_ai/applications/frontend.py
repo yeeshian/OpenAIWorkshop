@@ -106,6 +106,7 @@ def _ensure_ws():
     if st.session_state.ws_started:
         return True
     def on_message(ws, message):
+        print(f"[WS] Received message: {message[:100]}...")  # Debug log
         try:
             data = json.loads(message)
         except Exception:
@@ -136,6 +137,7 @@ def _ensure_ws():
         if "ws_events" not in st.session_state:
             st.session_state["ws_events"] = []
         st.session_state.ws_events.append({"type": "info", "message": "WebSocket connected"})
+        print(f"[WS] Connected for session {st.session_state['session_id']}")  # Debug log
     def run_ws():
         headers = []
         tok = st.session_state.get("token")
@@ -164,13 +166,19 @@ if st.session_state.token and not st.session_state.ws_started:
 def send_ws_prompt(prompt: str) -> bool:
     # Ensure connection is ready
     if not _ensure_ws():
+        st.warning("⚠️ WebSocket not available, using REST fallback")
         return False
-    for _ in range(40):
+    
+    # Wait for connection
+    for i in range(40):
         if st.session_state.ws_connected:
             break
         time.sleep(0.05)
+    
     if not st.session_state.ws_connected:
+        st.warning(f"⚠️ WebSocket connection timeout after 2s, using REST fallback")
         return False
+    
     payload = {
         "session_id": st.session_state["session_id"],
         "prompt": prompt,
@@ -178,9 +186,11 @@ def send_ws_prompt(prompt: str) -> bool:
     }
     try:
         st.session_state.ws.send(json.dumps(payload))
+        st.info("✅ Sent via WebSocket - watch for streaming updates below...")
         return True
     except Exception as e:
         st.session_state.ws_events.append({"type": "error", "message": f"Send failed: {e}"})
+        st.error(f"❌ WebSocket send failed: {e}")
         return False
 
 # Render pushed events (after existing REST history)
@@ -199,6 +209,30 @@ for ev in st.session_state.ws_events:
         for r in ev.get("results", []):
             with st.chat_message("assistant"):
                 st.markdown(f"✅ {r.get('content')}")
+    # Magentic-specific events
+    elif t == "orchestrator":
+        kind = ev.get("kind", "plan")
+        icon = "🧠" if kind == "plan" else "📊" if kind == "progress" else "✅"
+        with st.chat_message("assistant"):
+            st.markdown(f"{icon} **Orchestrator {kind.upper()}**")
+            st.markdown(ev.get("content", ""))
+    elif t == "agent_start":
+        agent_name = ev.get("agent_id", "unknown").replace("_", " ").title()
+        with st.chat_message("assistant"):
+            st.info(f"🤖 **{agent_name}** is working...")
+    elif t == "agent_token":
+        agent_name = ev.get("agent_id", "unknown").replace("_", " ").title()
+        with st.chat_message("assistant"):
+            st.write(f"💬 {agent_name}: {ev.get('content', '')}")
+    elif t == "agent_message":
+        agent_name = ev.get("agent_id", "unknown").replace("_", " ").title()
+        with st.chat_message("assistant"):
+            st.markdown(f"**{agent_name}:**")
+            st.markdown(ev.get("content", ""))
+    elif t == "final_result":
+        with st.chat_message("assistant"):
+            st.success("✅ Final Answer")
+            st.markdown(ev.get("content", ""))
     elif t == "error":
         st.error(ev.get("message"))
     elif t == "info":
@@ -218,7 +252,7 @@ if prompt and st.session_state.token:
                 CHAT_URL,
                 json={"session_id": st.session_state["session_id"], "prompt": prompt},
                 headers=auth_headers(),
-                timeout=60,
+                timeout=180,  # Increased from 60s to 180s for multi-agent workflows
             )
             r.raise_for_status()
             answer = r.json()["response"]

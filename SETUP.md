@@ -167,6 +167,50 @@ COSMOSDB_CONTAINER_NAME="state_store"
 
 #### Make sure your Azure resources are configured to use the correct model deployment names, endpoints, and API versions.  
   
+---
+
+## 🚀 Microsoft Agent Framework Setup (NEW!)
+
+This workshop now includes full support for [Microsoft's Agent Framework](https://github.com/microsoft/agent-framework), the latest agentic AI framework from Microsoft with advanced capabilities.
+
+### Agent Framework Options:
+
+**Single Agent (`agents.agent_framework.single_agent`):**
+- Basic ChatAgent with MCP tools
+- Token-by-token streaming via WebSocket
+- Tool call visibility in React UI
+- Session state persistence across requests
+
+**Magentic Multi-Agent (`agents.agent_framework.multi_agent.magentic_group`):**
+- Intelligent orchestrator coordinates specialist agents (CRM/Billing, Product/Promotions, Security)
+- Real-time streaming of orchestrator planning and agent responses
+- Custom progress ledger for human-in-the-loop support
+- Checkpointing for resumable workflows
+- React UI shows full internal process: task ledger, instructions, agent tool calls
+
+**Handoff Multi-Agent (`agents.agent_framework.multi_agent.handoff_multi_domain_agent`):**
+- Domain-specific agents with handoff capabilities
+- Agents can transfer tasks to specialists when needed
+- State preservation during handoffs
+
+### Recommended Configuration for Agent Framework:
+
+```bash
+# In your .env file, uncomment one of these:
+AGENT_MODULE="agents.agent_framework.single_agent"
+# OR
+AGENT_MODULE="agents.agent_framework.multi_agent.magentic_group"
+# OR
+AGENT_MODULE="agents.agent_framework.multi_agent.handoff_multi_domain_agent"
+
+# Optional: Enable workflow event logging
+MAGENTIC_LOG_WORKFLOW_EVENTS=true
+MAGENTIC_ENABLE_PLAN_REVIEW=true
+MAGENTIC_MAX_ROUNDS=10
+```
+
+**📌 Important:** Agent Framework works best with the **React frontend** to visualize the internal agent processes, orchestrator planning, and tool calls in real-time.
+
 ---  
   
 ### 5. Run MCP Server 
@@ -182,51 +226,116 @@ python mcp_service.py
 ### 6. Run application  
 Navigate to ```agentic_ai/applications```
 
-The common backend application runs the agent selected in the .env file and connects to the frontend UI. 
-  
-### Option 1: Run Both Backend and Frontend Together  
-  
+The common backend application runs the agent selected in the .env file and connects to the frontend UI.
+
+---
+
+## 🎨 Choose Your Frontend Experience
+
+### **Option A: React Frontend (Recommended for Agent Framework)** ✨
+
+The React frontend provides **advanced streaming visualization** ideal for:
+- **Microsoft Agent Framework** agents (single-agent and multi-agent Magentic orchestration)
+- Real-time token-by-token streaming
+- **Internal agent process visibility**: See orchestrator planning, agent thinking, and tool calls
+- Turn-by-turn conversation history with tool call tracking
+- Agent event timeline with emoji labels (📋 planning, 💳 billing agent, 🎁 promotions, etc.)
+
+#### Running with React:
+
+**Terminal 1 - Start Backend:**
+```bash
+cd agentic_ai/applications
+python backend.py
+# Backend runs on http://localhost:7000 with WebSocket support
+```
+
+**Terminal 2 - Start React Frontend:**
+```bash
+cd agentic_ai/applications/react-frontend
+npm install  # First time only
+npm start
+# React app opens at http://localhost:3000
+```
+
+**Best for:** Agent Framework single-agent, magentic_group multi-agent, viewing internal agent processes
+
+---
+
+### **Option B: Streamlit Frontend (Simple & Fast)** 🚀
+
+The Streamlit frontend provides a **clean, simple chat interface** ideal for:
+- Quick prototyping and demos
+- Simple interaction without streaming visualization
+- All agent types (Autogen, Semantic Kernel, Agent Framework)
+
+#### Running with Streamlit:
+
+**Option B1: Run Both Backend and Frontend Together**
 ```bash  
+cd agentic_ai/applications
 bash run_application.sh  
 ```
-This script will start the FastAPI backend (`backend.py`) and the Streamlit frontend (`frontend.py`) simultaneously.  
-  
-- The backend will listen on [http://localhost:7000](http://localhost:7000).  
-- The Streamlit user interface will open (usually at [http://localhost:8501](http://localhost:8501)).
+This script starts both FastAPI backend and Streamlit frontend simultaneously.
+- Backend: [http://localhost:7000](http://localhost:7000)
+- Streamlit: [http://localhost:8501](http://localhost:8501)
 
-### Option 2: Run Backend and Frontend Separately
+**Option B2: Run Backend and Frontend Separately**
 
-### 1. Start the FastAPI Backend  
-  
+**Terminal 1 - Start Backend:**
 ```bash  
+cd agentic_ai/applications
 python backend.py  
-# Keep this terminal open; open another terminal for the frontend.  
 ```
-The backend will be available at `http://localhost:7000/chat`.  
-  
-### 2. Start the Streamlit Frontend  
-  
+
+**Terminal 2 - Start Streamlit:**
 ```bash  
+cd agentic_ai/applications
 streamlit run frontend.py  
 ```
-Navigate to the address Streamlit provides (typically http://localhost:8501) to use the chat interface.  
-Streamlit should popup a chat window for the Agent in a new Edge tab. 
 
-If you successfully completed all the steps, setup is complete and your agent should be running now !
+**Best for:** Simple agent testing, Autogen agents, quick demos
+
+---
+
+If you successfully completed all the steps, setup is complete and your agent should be running now!
   
+## 📊 Quick Comparison: Which Setup Is Right For You?
+
+| Feature | React Frontend | Streamlit Frontend |
+|---------|---------------|-------------------|
+| **Real-time streaming** | ✅ Token-by-token | ❌ Full response only |
+| **Internal process visibility** | ✅ Orchestrator, agents, tools | ❌ Final answer only |
+| **Tool call tracking** | ✅ Per-turn history | ❌ Not shown |
+| **Multi-agent visualization** | ✅ Agent timeline & planning | ❌ Not shown |
+| **Best for Agent Framework** | ✅ **Recommended** | ⚠️ Basic support |
+| **Setup complexity** | Medium (npm install) | Low (pip only) |
+| **Best use case** | Development, demos, debugging | Quick testing, simple chat |
+
+**Recommendation:**
+- Use **React** for Agent Framework agents to see the full multi-agent orchestration
+- Use **Streamlit** for quick testing of any agent type or simple demos
+
+---
+
 ## How It Works  
   
-1. **Web UI (Streamlit):**    
+1. **Web UI (React or Streamlit):**    
    Users input messages and interact with the assistant. A unique session ID is generated for each chat session.  
   
 2. **Backend (FastAPI):**    
-   Receives user prompts, manages the session and in-memory chat history, and retrieves or creates an agent according to the environment setting.  
+   Receives user prompts via WebSocket or REST API, manages the session and chat history, and retrieves or creates an agent according to the environment setting.  
   
 3. **Agent (specified by AGENT_MODULE):**    
-   Processes the input using Azure OpenAI and optional MCP tools. The agent may operate in single, multi-agent, or collaborative modes, depending on configuration.  
+   Processes the input using Azure OpenAI and optional MCP tools. The agent may operate in single, multi-agent, or collaborative modes, depending on configuration.
+   - **Agent Framework agents** stream events via WebSocket callbacks for real-time UI updates
+   - **Other agents** return complete responses via REST API  
   
 4. **Chat History:**    
-   Conversation history is stored per session and can be displayed in the frontend or reset as needed.  
+   Conversation history is stored per session and can be displayed in the frontend or reset as needed.
+   
+5. **WebSocket Streaming (React only):**
+   Real-time events broadcast agent thinking, tool calls, orchestrator planning, and streaming tokens to the React UI.  
   
 ---  
   
@@ -254,15 +363,18 @@ If you successfully completed all the steps, setup is complete and your agent sh
   
 ## Credits  
   
+- **[Microsoft Agent Framework](https://github.com/microsoft/agent-framework)** - Microsoft's latest agentic AI framework
 - **Microsoft Azure OpenAI Service**  
-- **MCP Project**  
-- **AutoGen**  
+- **MCP Project** - Model Context Protocol
+- **AutoGen** - Multi-agent conversation framework
+- **Semantic Kernel** - Microsoft's AI orchestration SDK
     
   
 ---    
 ## Acknowledgments  
   
+- Microsoft Agent Framework Team
 - Microsoft Azure OpenAI Service    
 - MCP Project    
-- AutoGen
+- AutoGen Community
 - SDP CSA & SE Team - James Nguyen, Anil Dwarkanath, Nicole Serafino, Claire Rehfuss, Patrick O'Malley, Kirby Repko, Heena Ugale, Aditya Agrawal    

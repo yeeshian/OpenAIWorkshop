@@ -24,4 +24,5 @@ msal
 PyJWT[crypto]
 chainlit
 websockets
+websocket-client
 -e ../../reference/agent-framework/python
