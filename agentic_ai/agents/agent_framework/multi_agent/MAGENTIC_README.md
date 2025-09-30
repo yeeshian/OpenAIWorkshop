@@ -1,5 +1,3 @@
-markdown
-// filepath: agentic_ai/agents/agent_framework/multi_agent/MAGENTIC_ORCHESTRATION.md
 # Magentic Orchestration Playbook
 
 This guide walks through the Magentic coordination flow implemented in the Microsoft Agent Framework—from the planner’s first fact-finding prompt to the final answer delivered back to the caller. It is meant for practitioners who are integrating or debugging Magentic-based teams inside the `agentic_ai` workspace.

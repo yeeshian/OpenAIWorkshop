@@ -36,15 +36,16 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 - **🎯 Microsoft Agent Framework Support (NEW!):** Full integration with [Microsoft's Agent Framework](https://github.com/microsoft/agent-framework) featuring:
   - **Single-agent** with MCP tools and streaming token-by-token responses
   - **Multi-agent Magentic orchestration** with intelligent task delegation and progress tracking
-  - **Handoff-based multi-domain agents** for specialized task routing
+  - **Handoff-based multi-domain agents** for specialized task routing with smart context transfer
   - **Checkpointing and resumable workflows** for long-running agentic tasks
   - **Real-time WebSocket streaming** with internal agent process visibility
+  - 📚 **[See detailed pattern guide and documentation →](agentic_ai/agents/agent_framework/README.md)**
   
 - **🖥️ Advanced UI Options:**  
   - **React Frontend:** Real-time streaming visualization with agent internal processes, tool calls, orchestrator planning, and turn-by-turn history tracking
   - **Streamlit Frontend:** Simple, elegant chat interface for quick prototyping and demos
   
-- **Configurable LLM Backend:** Use the latest Azure OpenAI GPT models (e.g., GPT-4.1, GPT-4o).  
+- **Configurable LLM Backend:** Use the latest Azure OpenAI GPT models (e.g., GPT-5, GPT-4.1, GPT-4o).  
 - **MCP Server Integration:** Advanced tools to enhance agent orchestration and capabilities with Model Context Protocol.  
 - **A2A (Agent-to-Agent) Protocol Support:** Enables strict cross-domain, black-box multi-agent collaboration using [Google's A2A protocol](https://github.com/google-a2a/A2A). [Learn more &rarr;](agentic_ai/agents/semantic_kernel/multi_agent/a2a).  
 - **Durable Agent Pattern:** Includes a demo of a robust agent that persists its state, survives restarts, and manages long-running workflows. [Learn more &rarr;](agentic_ai/agents/autogen/durable_agent/README.md)  
@@ -64,8 +65,9 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
   
 1. Review the [Setup Instructions](./SETUP.md) for environment prerequisites and step-by-step installation.  
 2. Explore the [Business Scenario and Agent Design](./SCENARIO.md) to understand the workshop challenge.  
-3. Dive into  [System Architecture](./ARCHITECTURE.md) before building and customizing your agent solutions.  
-4. Utilize the [Support Guide](./SUPPORT.md) for troubleshooting and assistance.  
+3. Check out the **[Agent Framework Implementation Patterns](agentic_ai/agents/agent_framework/README.md)** to choose the right multi-agent approach (single-agent, Magentic orchestration, or handoff pattern).
+4. Dive into [System Architecture](./ARCHITECTURE.md) before building and customizing your agent solutions.  
+5. Utilize the [Support Guide](./SUPPORT.md) for troubleshooting and assistance.  
   
 ---  
   

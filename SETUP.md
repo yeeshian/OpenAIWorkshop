@@ -215,9 +215,10 @@ This workshop now includes full support for [Microsoft's Agent Framework](https:
 - React UI shows full internal process: task ledger, instructions, agent tool calls
 
 **Handoff Multi-Agent (`agents.agent_framework.multi_agent.handoff_multi_domain_agent`):**
-- Domain-specific agents with handoff capabilities
-- Agents can transfer tasks to specialists when needed
-- State preservation during handoffs
+- Direct agent-to-user communication with intelligent domain routing
+- Configurable context transfer between specialists (preserves customer info, history)
+- Smart intent classification for seamless handoffs
+- Cost-efficient (33% fewer LLM calls vs orchestrator patterns)
 
 ### Recommended Configuration for Agent Framework:
 
@@ -229,11 +230,16 @@ AGENT_MODULE="agents.agent_framework.multi_agent.magentic_group"
 # OR
 AGENT_MODULE="agents.agent_framework.multi_agent.handoff_multi_domain_agent"
 
-# Optional: Enable workflow event logging
+# Magentic Orchestration Settings (for magentic_group)
 MAGENTIC_LOG_WORKFLOW_EVENTS=true
-MAGENTIC_ENABLE_PLAN_REVIEW=true
+MAGENTIC_ENABLE_PLAN_REVIEW=false  # Set to true for human-in-the-loop plan approval
 MAGENTIC_MAX_ROUNDS=10
+
+# Handoff Agent Context Transfer (for handoff_multi_domain_agent)
+HANDOFF_CONTEXT_TRANSFER_TURNS=-1  # -1=all history, 0=none, N=last N turns
 ```
+
+📚 **[See detailed pattern guide and configuration →](agentic_ai/agents/agent_framework/README.md)**
 
 **📌 Important:** Agent Framework works best with the **React frontend** to visualize the internal agent processes, orchestrator planning, and tool calls in real-time.
 
