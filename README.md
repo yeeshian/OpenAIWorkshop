@@ -34,6 +34,7 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 ## Key Features  
   
 - **🎯 Microsoft Agent Framework Support (NEW!):** Full integration with [Microsoft's Agent Framework](https://github.com/microsoft/agent-framework) featuring:
+  - **Now available via pip!** Install with: `pip install agent-framework` or `uv add agent-framework`
   - **Single-agent** with MCP tools and streaming token-by-token responses
   - **Multi-agent Magentic orchestration** with intelligent task delegation and progress tracking
   - **Handoff-based multi-domain agents** for specialized task routing with smart context transfer

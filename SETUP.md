@@ -1,7 +1,24 @@
 ![alt text](image-1.png)
 # Microsoft AI Agentic Workshop Setup
 
-This document describes how to setup and run your AI Agents for the workshop
+This d#### Example dependencies include:  
+  
+- `flask`  
+- `faker`  
+- `python-dotenv`  
+- `tenacity`  
+- `openai`  
+- `flasgger`  
+- `fastmcp`  
+- `autogen-ext[mcp]`  
+- `autogen-agentchat`  
+- `agent-framework` (Microsoft's Agent Framework - now available via pip!)
+- `uvicorn`  
+- `fastapi`  
+- `streamlit`  
+- `requests`  
+- `pydantic`  
+- *(Add others as needed for your specific environment)* how to setup and run your AI Agents for the workshop
     
 ## Setup & Installation
   
@@ -281,6 +298,22 @@ The React frontend provides **advanced streaming visualization** ideal for:
 - Turn-by-turn conversation history with tool call tracking
 - Agent event timeline with emoji labels (📋 planning, 💳 billing agent, 🎁 promotions, etc.)
 
+#### Prerequisites for React Frontend:
+
+**Install Node.js (if not already installed):**
+
+The React frontend requires Node.js 16+ and npm. Check if you have them installed:
+
+```bash
+node --version  # Should be v16 or higher
+npm --version   # Should be v8 or higher
+```
+
+If not installed, download and install from:
+- **Windows/macOS/Linux:** [https://nodejs.org/](https://nodejs.org/) (Download the LTS version)
+- **Alternative (Windows):** Use `winget install OpenJS.NodeJS.LTS`
+- **Alternative (macOS):** Use `brew install node`
+
 #### Running with React:
 
 **Terminal 1 - Start Backend:**
@@ -300,12 +333,35 @@ python backend.py  # venv must be activated
 ```
 
 **Terminal 2 - Start React Frontend:**
+
 ```bash
+# Navigate to the React frontend directory
 cd agentic_ai/applications/react-frontend
-npm install  # First time only
+
+# Install dependencies (first time only, or after package.json changes)
+npm install
+
+# Start the development server
 npm start
-# React app opens at http://localhost:3000
+
+# The React app will automatically open at http://localhost:3000
+# If it doesn't open automatically, navigate to http://localhost:3000 in your browser
 ```
+
+**Configuration (Optional):**
+
+The React frontend connects to `http://localhost:7000` by default. To customize the backend URL, create a `.env` file in the `react-frontend` directory:
+
+```bash
+# react-frontend/.env
+REACT_APP_BACKEND_URL=http://localhost:7000
+```
+
+**Troubleshooting:**
+
+- **Port 3000 already in use?** The React app will prompt you to use a different port. Type `Y` to accept.
+- **npm install fails?** Try clearing npm cache: `npm cache clean --force` and retry.
+- **WebSocket connection errors?** Ensure the backend is running on port 7000 and firewall isn't blocking connections.
 
 **Best for:** Agent Framework single-agent, magentic_group multi-agent, viewing internal agent processes
 

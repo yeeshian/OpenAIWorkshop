@@ -42,4 +42,4 @@ dev = [
 
 [tool.uv]
 package = false
-prerelease = "if-necessary-or-explicit"
+prerelease = "allow"

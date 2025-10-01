@@ -4,11 +4,150 @@ This directory contains production-ready implementations of multi-agent patterns
 
 ## 📋 Table of Contents
 
+- [Quick Start](#-quick-start)
 - [Available Patterns](#available-patterns)
 - [Architecture Overview](#architecture-overview)
 - [Documentation](#documentation)
 - [Configuration](#configuration)
 - [Choosing the Right Pattern](#choosing-the-right-pattern)
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+1. **Python 3.10+** with dependencies installed via `uv sync` or `pip install -r requirements.txt`
+2. **Node.js 16+** (for React frontend) - Check with `node --version`
+3. **Running MCP Server** on `http://localhost:8000`
+4. **Azure OpenAI** endpoint and API key configured in `.env`
+
+### Setup Steps
+
+**1. Install Python dependencies:**
+
+*With uv (recommended):*
+```bash
+cd agentic_ai/applications
+uv sync
+```
+
+*Or with pip:*
+```bash
+cd agentic_ai/applications
+pip install -r requirements.txt
+```
+
+**2. Install Node.js (if needed):**
+
+The React frontend requires Node.js 16+ and npm:
+
+- **Windows/macOS/Linux:** Download from [https://nodejs.org/](https://nodejs.org/) (LTS version)
+- **Windows (winget):** `winget install OpenJS.NodeJS.LTS`
+- **macOS (Homebrew):** `brew install node`
+
+Verify installation:
+```bash
+node --version  # Should be v16+
+npm --version   # Should be v8+
+```
+
+**3. Configure your agent:**
+
+Edit `agentic_ai/applications/.env`:
+```bash
+# Choose your pattern
+AGENT_MODULE=agents.agent_framework.single_agent
+# OR
+AGENT_MODULE=agents.agent_framework.multi_agent.magentic_group
+# OR
+AGENT_MODULE=agents.agent_framework.multi_agent.handoff_multi_domain_agent
+
+# Configure Azure OpenAI
+AZURE_OPENAI_API_KEY=your_key
+AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
+AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4.1
+AZURE_OPENAI_API_VERSION=2025-03-01-preview
+OPENAI_MODEL_NAME=gpt-4.1-2025-04-14
+
+# MCP Server
+MCP_SERVER_URI=http://localhost:8000/mcp
+```
+
+**4. Start the MCP Server:**
+
+*Terminal 1:*
+```bash
+cd mcp
+uv run python mcp_service.py
+# Server runs on http://localhost:8000
+```
+
+**5. Start the Backend:**
+
+*Terminal 2:*
+```bash
+cd agentic_ai/applications
+uv run python backend.py
+# Backend runs on http://localhost:7000
+```
+
+**6. Start the React Frontend:**
+
+*Terminal 3:*
+```bash
+cd agentic_ai/applications/react-frontend
+
+# First time only: Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# App opens at http://localhost:3000
+```
+
+📚 **[See detailed React UI features and configuration →](../../applications/react-frontend/README.md)**
+
+**Optional: Configure React backend URL**
+
+Create `react-frontend/.env` if you need to change the backend URL:
+```bash
+REACT_APP_BACKEND_URL=http://localhost:7000
+```
+
+**Troubleshooting:**
+- **Port 3000 in use?** React will prompt you to use a different port. Type `Y`.
+- **WebSocket errors?** Ensure backend is running on port 7000.
+- **npm install fails?** Try: `npm cache clean --force` and retry.
+
+### Quick Test
+
+Once all three terminals are running:
+
+1. Open http://localhost:3000 in your browser
+2. Type: "Customer 251, what's my billing summary?"
+3. Watch the left panel to see:
+   - Intent classification (Handoff pattern)
+   - Orchestrator planning (Magentic pattern)
+   - Agent tool calls in real-time
+   - Final response in the chat area
+
+### Alternative: Streamlit Frontend
+
+If you prefer a simpler UI without the React setup:
+
+```bash
+cd agentic_ai/applications
+uv run streamlit run frontend.py
+# Opens at http://localhost:8501
+```
+
+**Trade-offs:**
+- ✅ **Streamlit:** Simpler setup, no Node.js required
+- ✅ **React:** Real-time streaming, internal process visibility, tool call tracking ([See UI features →](../../applications/react-frontend/README.md))
+
+**Recommendation:** Use React for Agent Framework patterns to see the full orchestration and agent thinking process.
 
 
 
