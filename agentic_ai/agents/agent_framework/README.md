@@ -478,6 +478,8 @@ cd react-frontend
 npm start
 ```
 
+📚 **[React Frontend Documentation →](../../applications/react-frontend/README.md)**
+
 ### Adding a New Pattern
 
 1. Create agent class inheriting from `BaseAgent`
