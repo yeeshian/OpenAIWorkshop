@@ -133,7 +133,7 @@ class PassthroughJWTVerifier(TokenVerifier):
 
 # ────────────────────────── FastMCP INITIALISATION ──────────────────────  
 # Check if authentication should be disabled
-DISABLE_AUTH = os.getenv("DISABLE_AUTH", "false").lower() in ("true", "1", "yes", "on")
+DISABLE_AUTH = os.getenv("DISABLE_AUTH", "true").lower() in ("true", "1", "yes", "on")
 
 # Check if passthrough authentication should be used (accepts any token)
 USE_PASSTHROUGH_AUTH = os.getenv("USE_PASSTHROUGH_AUTH", "true").lower() in ("true", "1", "yes", "on")
