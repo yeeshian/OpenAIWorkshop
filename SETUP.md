@@ -1,25 +1,5 @@
-![alt text](image-1.png)
 # Microsoft AI Agentic Workshop Setup
 
-This d#### Example dependencies include:  
-  
-- `flask`  
-- `faker`  
-- `python-dotenv`  
-- `tenacity`  
-- `openai`  
-- `flasgger`  
-- `fastmcp`  
-- `autogen-ext[mcp]`  
-- `autogen-agentchat`  
-- `agent-framework` (Microsoft's Agent Framework - now available via pip!)
-- `uvicorn`  
-- `fastapi`  
-- `streamlit`  
-- `requests`  
-- `pydantic`  
-- *(Add others as needed for your specific environment)* how to setup and run your AI Agents for the workshop
-    
 ## Setup & Installation
   
 ### 1. Clone the Repository
@@ -87,26 +67,6 @@ venv\Scripts\activate
 cd agentic_ai/applications
 pip install -r requirements.txt  
 ```
-
-#### Example `requirements.txt` includes:  
-  
-- `flask`  
-- `faker`  
-- `python-dotenv`  
-- `tenacity`  
-- `openai`  
-- `flasgger`  
-- `fastmcp`  
-- `autogen-ext[mcp]`  
-- `autogen-agentchat`  
-- `uvicorn`  
-- `fastapi`  
-- `streamlit`  
-- `requests`  
-- `pydantic`  
-- *(Add others as needed for your specific environment)*  
-  
----  
 
 ### 3. Deploy LLM model using Azure AI Foundry
 
