@@ -68,7 +68,6 @@ AZURE_OPENAI_API_KEY=your_key
 AZURE_OPENAI_ENDPOINT=https://your-endpoint.openai.azure.com/
 AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4.1
 AZURE_OPENAI_API_VERSION=2025-03-01-preview
-OPENAI_MODEL_NAME=gpt-4.1-2025-04-14
 
 # MCP Server
 MCP_SERVER_URI=http://localhost:8000/mcp
