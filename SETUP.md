@@ -133,5 +133,5 @@ DISABLE_AUTH="true"
 ## Next Step: Running MCP Server
 
 Once your `.env` files are configured, you can start the MCP server. 
-- Click here for [MCP setup instructions using uv](docs/1_mcp_uv.md).
-- Click here for [MCP setup instructions using traditional method](docs/1_mcp_pip.md).
+- Click here for [MCP setup instructions using uv](docs/01_mcp_uv.md).
+- Click here for [MCP setup instructions using traditional method](docs/01_mcp_pip.md).
