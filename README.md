@@ -1,4 +1,4 @@
-![alt text](media/image-1.png)
+![alt text](docs/media/image-1.png)
 # Microsoft AI Agentic Workshop Repository  
   
 Welcome to the official repository for the Microsoft AI Agentic Workshop! This repository provides all the resources, code, and documentation you need to explore, prototype, and compare various agent-based AI solutions using Microsoft's leading AI technologies.  

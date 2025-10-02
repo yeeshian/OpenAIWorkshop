@@ -67,6 +67,8 @@ In this part, you will configure and run the backend service for the Microsoft A
 ### 2. Run Backend Service
 
 > **Action Items:**
+> Open a new terminal window separate than the one running the MCP server.
+> ![new terminal](media/01_mcp_new_terminal.png)
 > Navigate to the applications directory:
 > ```bash
 > cd agentic_ai/applications
