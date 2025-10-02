@@ -19,6 +19,8 @@ In this part, you will set up and run the Streamlit frontend for the Microsoft A
 ### 1. Run Streamlit frontend
 
 > **Action Items:**
+> Open a new terminal window separate than the one running the MCP server and backend.
+> ![new terminal](media/01_mcp_new_terminal.png)
 > Navigate to the applications directory and start Streamlit with uv:
 > ```bash  
 > cd agentic_ai/applications

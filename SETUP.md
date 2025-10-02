@@ -18,9 +18,12 @@
 [3. Set up your environment variables](#3-set-up-your-environment-variables)
 
   
-### 1. Clone the Repository
+### 1. Open Terminal and Clone the Repository
 
-In your terminal, run the following command to clone the repository:
+> Open a new terminal window in VS Code or your preferred terminal application:
+> ![new terminal](docs/media/01_mcp_open_terminal.png)
+
+In the terminal, run the following command to clone the repository:
 
 ```bash 
 git clone https://github.com/microsoft/OpenAIWorkshop.git 

@@ -52,6 +52,6 @@ In this part, you will set up the MCP (Model Control Protocol) for the Microsoft
 ## Success criteria
 - MCP server is running and ready to accept requests.
 
-**Alternative**: Use `pip` and `venv` (slower): [Run MCP with pip](mcp_traditional.md)
+**Alternative**: Use `pip` and `venv` (slower): [Run MCP with pip](mcp_pip.md)
 
 **Next Step**: [Run the Backend Application](02_backend_uv.md)

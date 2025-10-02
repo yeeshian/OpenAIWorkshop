@@ -17,9 +17,11 @@ In this part, you will set up and run the Streamlit frontend for the Microsoft A
 [1. Activate virtual environment](#1-activate-virtual-environment)  
 [2. Run Streamlit frontend](#2-run-streamlit-frontend)
 
-### 1. Activate virtual environment
+### 1. Open New Terminal and Activate virtual environment
 
 > **Action Items:**
+> Open a new terminal window separate than the one running the MCP server and backend.
+> ![new terminal](media/01_mcp_new_terminal.png)
 > Windows:
 > ```bash
 > venv\Scripts\activate
