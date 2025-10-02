@@ -1,45 +1,52 @@
-# Microsoft AI Agentic Workshop MCP Setup
+# Part 1: MCP Set Up
 
-Previous step: [SETUP.md](../SETUP.md)
+## Pre-requisites
+- Complete [Part 0](../SETUP.md)
 
-### 1. Install Python dependencies  
-If you prefer the traditional approach or don't want to install `uv`, start by creating and activating a virtual environment, then install the dependencies using `pip`.:
+## Summary
+In this part, you will set up the MCP (Model Control Protocol) for the Microsoft AI Agentic Workshop. This involves installing the necessary Python dependencies and running the MCP server.
 
-##### Activate virtual environment:
-**Windows:**
+If you prefer the traditional approach or don't want to install `uv`, start by creating and activating a virtual environment, then install the dependencies using `pip`. If you'd prefer to use `uv`, follow the instructions found in the [uv version of this guide](/01_mcp_uv.md).
+ ## Steps
+1. Install Python dependencies  
 
-```bash
+    > **Action Items:**
+    > Activate virtual environment:
+    >
+    > Windows:
+    > 
+    ```bash
 
-python -m venv venv
-venv\Scripts\activate
-```
-**macOS/Linux:**
-```bash 
-# Creating and activating virtual environment on macOS/Linux
-python -m venv venv
-source venv/bin/activate
-```
+    python -m venv venv
+    venv\Scripts\activate
+    ```
+    > macOS/Linux:
+    ```bash 
+    python -m venv venv
+    source venv/bin/activate
+    ```
 
-##### Install dependencies:
-```bash
-# Install dependencies from `agentic_ai/applications`
-cd agentic_ai/applications
-pip install -r requirements.txt  
-```
-
-#### 2. Run MCP Server
-
-
-Note: If you are currently in the `agentic_ai/applications` folder, go back to the root folder first:
-```bash
-cd ../..
-```
-Navigate to the `mcp` folder and start the MCP server:
-```bash
-cd mcp
-# Make sure your virtual environment is activated
-python mcp_service.py
-# Keep this terminal open; open another terminal for the next step.
-```
+2. Install dependencies:
+    > **Action Items**:
+    > Navigate to the `agentic_ai/applications` folder and install the required packages:
+    ```bash
+    cd agentic_ai/applications
+    pip install -r requirements.txt
+    ```
+3. Run MCP Server
+    > **Action Items**:
+    > Ensure your virutal environment is activated.
+    > - Note: If you are currently in the `agentic_ai/applications` folder, go back to the root folder first:
+    ```bash
+    cd ../..
+    ```
+    > Navigate to the `mcp` folder and start the MCP server with the follwing command:
+    ```bash
+    cd mcp
+    python mcp_service.
+    ```
+    > Note: Let the MCP server run in this terminal window. Open a new terminal window to proceed to the next step. 
+## Success criteria
+- MCP server is running and ready to accept requests.
 
 **Next Step**: [Run the Backend Application](02_backend_pip.md)

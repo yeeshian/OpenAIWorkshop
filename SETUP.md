@@ -1,10 +1,26 @@
-# Microsoft AI Agentic Workshop Setup
+# Part 0: Microsoft AI Agentic Workshop Setup
+> Note: Read the Workshop scenario overview [here](SCENARIO.md) before starting the setup.
 
-## Setup & Installation
+## Goal
+- Clone the repository
+- Deploy a Large Language Model (LLM) using Azure AI Foundry
+- Configure the applications to use your deployed model and other Azure resources
+
+## Prerequisites for Part 0
+- An Azure Account and Subscription
+- An understanding of:
+    - Azure Subscriptions and Resources
+    - Github Mechanics (creating an account, cloning a repo, etc.)
+
+## Steps
+[1. Clone the Repository](#1-clone-the-repository)  
+[2. Deploy LLM model using Azure AI Foundry](#2-deploy-llm-model-using-azure-ai-foundry)  
+[3. Set up your environment variables](#3-set-up-your-environment-variables)
+
   
 ### 1. Clone the Repository
 
-Open VS Code terminal 
+In your terminal, run the following command to clone the repository:
 
 ```bash 
 git clone https://github.com/microsoft/OpenAIWorkshop.git 

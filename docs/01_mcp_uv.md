@@ -1,45 +1,56 @@
-# Microsoft AI Agentic Workshop MCP Setup
+# Part 1: MCP Set Up
 
-Previous step: [SETUP.md](../SETUP.md)
+## Pre-requisites
+- Complete [Part 0](../SETUP.md)
 
-### 1. Install Python dependencies  
+## Summary
+In this part, you will set up the MCP (Model Control Protocol) for the Microsoft AI Agentic Workshop. This involves installing the necessary Python dependencies and running the MCP server.
 
-#### ⚡Use `uv` for fastest setup
+## Steps
+1. Install uv
 
-[**uv**](https://github.com/astral-sh/uv) is a blazing-fast Python package installer and resolver written in Rust. It's 10-100x faster than `pip` and automatically manages virtual environments.
+- ⚡Use `uv` for fastest setup
 
-#### Install uv:
-**Windows (PowerShell)**:
-```bash
-powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-**macOS/Linux**:
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
+- [**uv**](https://github.com/astral-sh/uv) is a blazing-fast Python package installer and resolver written in Rust. It's 10-100x faster than `pip` and automatically manages virtual environments.
 
-#### Setup dependencies with uv:
-Note: uv automatically creates .venv and installs dependencies from pyproject.toml
-```bash
-# Navigate to the applications directory
-cd agentic_ai/applications
+    > **Action Items:**
+    > Install `uv` by running the following command in your terminal:
+    > Windows (PowerShell):
+    ```bash
+    powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+    ```
+    > macOS/Linux:
+    ```bash
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    ```
 
-# Create virtual environment and install all dependencies in one command
-uv sync
-```
-#### 2. Run MCP Server
+2. Install dependencies with uv:
 
+    > Note: uv automatically creates .venv and installs dependencies from pyproject.toml
+    > **Action Items**:
+    > Navigate to the `agentic_ai/applications` folder and install the dependencies by running the following command:
+    ```bash
+    # Navigate to the applications directory
+    cd agentic_ai/applications
 
-Note: If you are currently in the `agentic_ai/applications` folder, go back to the root folder first:
-```bash
-cd ../..
-```
-Navigate to the `mcp` folder and start the MCP server:
-```bash
-cd mcp
-uv run python mcp_service.py
-# Keep this terminal open; open another terminal for the next step.
-```
+    # Create virtual environment and install all dependencies in one command
+    uv sync
+    ```
+2. Run MCP Server
+
+    > **Action Items:**
+    > Note: If you are currently in the `agentic_ai/applications` folder, go back to the root folder first:
+    ```bash
+    cd ../..
+    ```
+    > Navigate to the `mcp` folder and start the MCP server:
+    ```bash
+    cd mcp
+    uv run python mcp_service.py
+    ```
+    > Note: Let the MCP server run in this terminal window. Open a new terminal window to proceed to the next step. 
+## Success criteria
+- MCP server is running and ready to accept requests.
 
 **Alternative**: Use `pip` and `venv` (slower): [Run MCP with pip](mcp_traditional.md)
 

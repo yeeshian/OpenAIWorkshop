@@ -1,11 +1,15 @@
-# Microsoft AI Agentic Application Backend Setup
-Previous step: [mcp_uv.md](mcp_uv.md)
+# Part 2: Application Backend Setup with pip
 
-## 🚀 Microsoft Agent Framework Setup (NEW!)
+## Pre-requisites
+- Complete [Part 0](../SETUP.md)
+- Complete [Part 1: MCP Setup (pip)](01_mcp_pip.md)
+- MCP server running on `http://localhost:8000/mcp`
+- Virtual environment activated
 
-This workshop now includes full support for [Microsoft's Agent Framework](https://github.com/microsoft/agent-framework), the latest agentic AI framework from Microsoft with advanced capabilities.
+## Summary
+In this part, you will configure and run the backend service for the Microsoft AI Agentic Workshop using traditional pip/venv setup. The backend includes full support for Microsoft's Agent Framework with advanced multi-agent capabilities.
 
-### Agent Framework Options:
+## Microsoft Agent Framework (NEW)
 
 **Single Agent (`agents.agent_framework.single_agent`):**
 - Basic ChatAgent with MCP tools
@@ -26,69 +30,68 @@ This workshop now includes full support for [Microsoft's Agent Framework](https:
 - Smart intent classification for seamless handoffs
 - Cost-efficient (33% fewer LLM calls vs orchestrator patterns)
 
-### Recommended Configuration for Agent Framework:
-There are a few configurations that are made in the `.env` file within the `agentic_ai/applications` folder to enable the Agent Framework or another agent type.
-```bash
-# In your .env file in agentic_ai/applications folder, uncomment one of following for agent framework, or another option:
-AGENT_MODULE="agents.agent_framework.single_agent"
-# OR
-AGENT_MODULE="agents.agent_framework.multi_agent.magentic_group"
-# OR
-AGENT_MODULE="agents.agent_framework.multi_agent.handoff_multi_domain_agent"
-```
+## Steps
+[1. Configure Agent Framework](#1-configure-agent-framework)  
+[2. Run Backend Service](#2-run-backend-service)  
+[3. Choose Frontend Experience](#3-choose-frontend-experience)
 
-### Important Environment Variables for Agent Framework
-In addition to setting the `AGENT_MODULE`, there are a few additional environment variables that can be configured with the same .env file. Add these to the bottom of your existing `.env` file:
+### 1. Configure Agent Framework
 
-**Magentic Orchestration Settings (for magentic_group)**
-```bash
-MAGENTIC_LOG_WORKFLOW_EVENTS=true
-MAGENTIC_ENABLE_PLAN_REVIEW=false  # Set to true for human-in-the-loop plan approval
-MAGENTIC_MAX_ROUNDS=10
-```
-**Handoff Agent Context Transfer (for handoff_multi_domain_agent)**
-```bash
-HANDOFF_CONTEXT_TRANSFER_TURNS=-1  # -1=all history, 0=none, N=last N turns
-```
+> **Action Items:**
+> Configure the agent type in your `.env` file within the `agentic_ai/applications` folder. Uncomment one of the following lines:
+> ```bash
+> # In your .env file in agentic_ai/applications folder, uncomment one of following for agent framework:
+> AGENT_MODULE="agents.agent_framework.single_agent"
+> # OR
+> AGENT_MODULE="agents.agent_framework.multi_agent.magentic_group"
+> # OR
+> AGENT_MODULE="agents.agent_framework.multi_agent.handoff_multi_domain_agent"
+> ```
+> 
+> Add additional environment variables to the bottom of your existing `.env` file:
+> 
+> **For Magentic Orchestration Settings (magentic_group):**
+> ```bash
+> MAGENTIC_LOG_WORKFLOW_EVENTS=true
+> MAGENTIC_ENABLE_PLAN_REVIEW=false  # Set to true for human-in-the-loop plan approval
+> MAGENTIC_MAX_ROUNDS=10
+> ```
+> 
+> **For Handoff Agent Context Transfer (handoff_multi_domain_agent):**
+> ```bash
+> HANDOFF_CONTEXT_TRANSFER_TURNS=-1  # -1=all history, 0=none, N=last N turns
+> ```
 
-📚 **[See detailed pattern guide and configuration →](agentic_ai/agents/agent_framework/README.md)**
+📚 **[See detailed pattern guide and configuration →](../agentic_ai/agents/agent_framework/README.md)**
 
-## Run Backend Service
-1. Navigate to the `agentic_ai/applications` directory:
-```bash
-cd agentic_ai/applications
-```
-2. Activate virtual environment:
+### 2. Run Backend Service
 
-**Windows:**
+> **Action Items:**
+> Navigate to the applications directory:
+> ```bash
+> cd agentic_ai/applications
+> ```
+> 
+> Activate virtual environment:
+> 
+> Windows:
+> ```bash
+> venv\Scripts\activate
+> ```
+> 
+> macOS/Linux:
+> ```bash 
+> source venv/bin/activate
+> ```
+> 
+> Run the backend:
+> ```bash
+> python backend.py
+> ```
 
-```bash
-venv\Scripts\activate
-```
+### 3. Choose Frontend Experience
 
-**macOS/Linux:**
-```bash 
-source venv/bin/activate
-```
-
-3. Run command:
-```bash
-python backend.py
-```
---- 
-
-## 🎨 Choose Your Frontend Experience
-
-### **React Frontend (Recommended for Agent Framework)** ✨
-
-The React frontend provides **advanced streaming visualization** ideal for:
-- **Microsoft Agent Framework** agents (single-agent and multi-agent Magentic orchestration)
-- Real-time token-by-token streaming
-- **Internal agent process visibility**: See orchestrator planning, agent thinking, and tool calls
-- Turn-by-turn conversation history with tool call tracking
-- Agent event timeline with emoji labels (📋 planning, 💳 billing agent, 🎁 promotions, etc.)
-
-## 📊 Quick Comparison: Which Setup Is Right For You?
+## 📊 Frontend Comparison
 
 | Feature | React Frontend | Streamlit Frontend |
 |---------|---------------|-------------------|
@@ -97,17 +100,19 @@ The React frontend provides **advanced streaming visualization** ideal for:
 | **Tool call tracking** | ✅ Per-turn history | ❌ Not shown |
 | **Multi-agent visualization** | ✅ Agent timeline & planning | ❌ Not shown |
 | **Best for Agent Framework** | ✅ **Recommended** | ⚠️ Basic support |
-| **Setup complexity** | Medium (npm install) | Low (pip only) |
+| **Setup complexity** | Medium (npm install) | Low (no additional setup) |
 | **Best use case** | Development, demos, debugging | Quick testing, simple chat |
 
 **Recommendation:**
 - Use **React** for Agent Framework agents to see the full multi-agent orchestration
 - Use **Streamlit** for quick testing of any agent type or simple demos
 
----
+## Success criteria
+- Backend service is running on `http://localhost:7000`
+- Agent Framework is properly configured
+- Backend can communicate with MCP server
+- Ready to connect to frontend
 
-Next step: [Run Frontend with React](03_frontend_react.md) | [Run Frontend with Streamlit](03_frontend_streamlit_pip.md)
+**Next Step**: Choose your frontend - [React Frontend (Recommended)](03_frontend_react.md) | [Streamlit Frontend](03_frontend_streamlit_pip.md)
 
 **📌 Important:** Agent Framework works best with the **React frontend** to visualize the internal agent processes, orchestrator planning, and tool calls in real-time.
-
----  =
