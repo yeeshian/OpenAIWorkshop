@@ -117,7 +117,7 @@ flowchart TD
 ---  
   
 ### Multi-Tenant Design Flow  
-*(Detailed in [MULTI_TENANT_MCP_SECURITY.md](./MULTI_TENANT_MCP_SECURITY.md))*  
+*(Detailed in [MULTI_TENANT_MCP_SECURITY.md](MULTI_TENANT_MCP_SECURITY.md))*  
   
 1. A multi-tenant “frontend” app in your home tenant defines app roles.  
 2. Customer tenant admins consent and assign their users to roles in their Enterprise App.  
