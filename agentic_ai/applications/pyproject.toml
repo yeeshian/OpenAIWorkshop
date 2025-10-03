@@ -19,7 +19,7 @@ dependencies = [
        "streamlit",
        "requests",
        "pydantic",
-       "semantic-kernel",
+       "semantic-kernel>=1.35",
        "a2a-sdk",
        "httpx",
        "azure-cosmos",
