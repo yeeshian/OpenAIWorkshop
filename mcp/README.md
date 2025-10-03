@@ -201,7 +201,7 @@ flowchart TD
 - **MCP tools server**: `mcp_service.py`    
   (`RemoteAuthProvider`, `JWTVerifier`/`Passthrough`, `AuthZMiddleware`, OAuth metadata route)  
 - **APIM policy**: `apim_inbound_policy.xml` (audience, tenant allow-list)  
-- **Design doc**: [`MULTI_TENANT_MCP_SECURITY.md`](./mcp/MULTI_TENANT_MCP_SECURITY.md)    
+- **Design doc**: [`MULTI_TENANT_MCP_SECURITY.md`](/MULTI_TENANT_MCP_SECURITY.md)    
 - **General auth choices**: [`general_mcp_security.md`](`general_mcp_security.md`)  
   
 ### Agentic Intelligence  
