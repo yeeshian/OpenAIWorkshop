@@ -1,0 +1,6 @@
+# Ignore localhost and dev servers
+http://localhost
+http://127.0.0.1
+
+# Ignore the multi-agent reademe, lots of broken links
+agentic_ai/agents/agent_framework/multi_agent/MAGENTIC_README.md

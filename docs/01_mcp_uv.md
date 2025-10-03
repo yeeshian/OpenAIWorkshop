@@ -54,6 +54,6 @@ In this part, you will set up the MCP (Model Control Protocol) for the Microsoft
 - A sample curl command for ensuring the MCP server is online: 
 `curl -sS -i -X POST "http://localhost:8000/mcp" -H "Accept: application/json, text/event-stream" -H 'Content-Type: application/json'  --data '{"jsonrpc":"2.0","id":"init-1","method":"initialize", "params":{"protocolVersion":"2024-11-05","capabilities":{}, "clientInfo":{"name":"curl","version":"8"}}}'`
 
-**Alternative**: Use `pip` and `venv` (slower): [Run MCP with pip](mcp_pip.md)
+**Alternative**: Use `pip` and `venv` (slower): [Run MCP with pip](01_mcp_pip.md)
 
 **Next Step**: [Run the Backend Application](02_backend_uv.md)
