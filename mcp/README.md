@@ -202,7 +202,7 @@ flowchart TD
   (`RemoteAuthProvider`, `JWTVerifier`/`Passthrough`, `AuthZMiddleware`, OAuth metadata route)  
 - **APIM policy**: `apim_inbound_policy.xml` (audience, tenant allow-list)  
 - **Design doc**: [`MULTI_TENANT_MCP_SECURITY.md`](/MULTI_TENANT_MCP_SECURITY.md)    
-- **General auth choices**: [`general_mcp_security.md`](`general_mcp_security.md`)  
+- **General auth choices**: Broken link: `general_mcp_security.md`general_mcp_security.md  
   
 ### Agentic Intelligence  
 - **Agentic server**: `mcp_service_agentic.py` (Autogen + Azure OpenAI)  
