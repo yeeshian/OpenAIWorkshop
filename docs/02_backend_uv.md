@@ -97,6 +97,7 @@ In this part, you will configure and run the backend service for the Microsoft A
 - Backend service is running on `http://localhost:7000`
 - Agent Framework is properly configured
 - Backend can communicate with MCP server
+  - A sample curl command to validate things are online: `curl -X 'POST' 'http://localhost:7000/chat'  -H 'accept: application/json'  -H 'Content-Type: application/json'  -d '{"session_id": "123", "prompt": "What can you help me with?"}'`
 - Ready to connect to frontend
 
 **Next Step**: Choose your frontend - [React Frontend (Recommended)](03_frontend_react.md) | [Streamlit Frontend](03_frontend_streamlit_uv.md)
