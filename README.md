@@ -49,7 +49,7 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 - **Configurable LLM Backend:** Use the latest Azure OpenAI GPT models (e.g., GPT-5, GPT-4.1, GPT-4o).  
 - **MCP Server Integration:** Advanced tools to enhance agent orchestration and capabilities with Model Context Protocol.  
 - **A2A (Agent-to-Agent) Protocol Support:** Enables strict cross-domain, black-box multi-agent collaboration using [Google's A2A protocol](https://github.com/google-a2a/A2A). [Learn more &rarr;](agentic_ai/agents/semantic_kernel/multi_agent/a2a).  
-- **Durable Agent Pattern:** Includes a demo of a robust agent that persists its state, survives restarts, and manages long-running workflows. [Learn more &rarr;](agentic_ai/agents/autogen/durable_agent/README.md)  
+- **Durable Agent Pattern:** Includes a demo of a robust agent that persists its state, survives restarts, and manages long-running workflows. [Learn more &rarr;](agentic_ai/scenarios/durable_agent/README.md)  
 - **Flexible Agent Architecture:**  
   - Supports single-agent, multi-agent, or reflection-based agents (selectable via `.env`).  
   - Agents can self-loop, collaborate, reflect, or take on dynamic roles as defined in modules.  
