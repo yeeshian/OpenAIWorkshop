@@ -25,8 +25,8 @@ class Agent(BaseAgent):
         self._current_turn = state_store.get(self._turn_key, 0)
         
         # Log that reflection agent is being used
-        print(f"🔥 REFLECTION AGENT INITIALIZED - Session: {session_id}")
-        logger.info(f"🔥 REFLECTION AGENT INITIALIZED - Session: {session_id}")
+        print(f"REFLECTION AGENT INITIALIZED - Session: {session_id}")
+        logger.info(f"REFLECTION AGENT INITIALIZED - Session: {session_id}")
 
     def set_websocket_manager(self, manager: Any) -> None:
         """Allow backend to inject WebSocket manager for streaming events."""
@@ -117,8 +117,8 @@ class Agent(BaseAgent):
 
     async def chat_async(self, prompt: str) -> str:
         """Run Primary Agent → Reviewer → Primary Agent refinement pipeline for customer support."""
-        print(f"🔥 REFLECTION AGENT chat_async called with prompt: {prompt[:50]}...")
-        logger.info(f"🔥 REFLECTION AGENT chat_async called with prompt: {prompt[:50]}...")
+        print(f"REFLECTION AGENT chat_async called with prompt: {prompt[:50]}...")
+        logger.info(f"REFLECTION AGENT chat_async called with prompt: {prompt[:50]}...")
         
         await self._setup_reflection_agents()
         if not (self._primary_agent and self._reviewer and self._thread):
@@ -129,20 +129,20 @@ class Agent(BaseAgent):
 
         # Use streaming if WebSocket manager is available
         if self._ws_manager:
-            print(f"🔥 REFLECTION AGENT: Using STREAMING path")
-            logger.info(f"🔥 REFLECTION AGENT: Using STREAMING path")
+            print(f"REFLECTION AGENT: Using STREAMING path")
+            logger.info(f"REFLECTION AGENT: Using STREAMING path")
             return await self._chat_async_streaming(prompt)
         
         # Non-streaming path (fallback)
-        print(f"🔥 REFLECTION AGENT: Using NON-STREAMING path")
-        logger.info(f"🔥 REFLECTION AGENT: Using NON-STREAMING path")
+        print(f"REFLECTION AGENT: Using NON-STREAMING path")
+        logger.info(f"REFLECTION AGENT: Using NON-STREAMING path")
         return await self._chat_async_non_streaming(prompt)
 
     async def _chat_async_streaming(self, prompt: str) -> str:
         """Handle reflection workflow with streaming support via WebSocket."""
         
-        print(f"🔥 STREAMING: Starting reflection workflow for: {prompt[:50]}...")
-        logger.info(f"🔥 STREAMING: Starting reflection workflow for: {prompt[:50]}...")
+        print(f"STREAMING: Starting reflection workflow for: {prompt[:50]}...")
+        logger.info(f"STREAMING: Starting reflection workflow for: {prompt[:50]}...")
         
         # Notify UI that reflection workflow is starting
         if self._ws_manager:
@@ -165,8 +165,8 @@ class Agent(BaseAgent):
             )
 
         # Step 1: Primary Agent (Customer Support) handles the customer inquiry
-        print(f"🔥 STREAMING STEP 1: Primary Agent processing customer inquiry")
-        logger.info(f"🔥 STREAMING STEP 1: Primary Agent processing customer inquiry")
+        print(f"STREAMING STEP 1: Primary Agent processing customer inquiry")
+        logger.info(f"STREAMING STEP 1: Primary Agent processing customer inquiry")
         
         # Notify UI about Step 1
         if self._ws_manager:
@@ -216,8 +216,8 @@ class Agent(BaseAgent):
         initial_response = ''.join(step1_response)
 
         # Step 2: Reviewer checks the customer support response
-        print(f"🔥 STREAMING STEP 2: Reviewer evaluating response quality")
-        logger.info(f"🔥 STREAMING STEP 2: Reviewer evaluating response quality")
+        print(f"STREAMING STEP 2: Reviewer evaluating response quality")
+        logger.info(f"STREAMING STEP 2: Reviewer evaluating response quality")
         
         # Send complete primary agent response
         if self._ws_manager:
@@ -289,8 +289,8 @@ class Agent(BaseAgent):
 
         # Step 3: Determine if refinement is needed
         if "APPROVE" not in feedback_result_text.upper():
-            print(f"🔥 STREAMING STEP 3: REFINEMENT NEEDED - Primary Agent improving response")
-            logger.info(f"🔥 STREAMING STEP 3: REFINEMENT NEEDED - Primary Agent improving response")
+            print(f"STREAMING STEP 3: REFINEMENT NEEDED - Primary Agent improving response")
+            logger.info(f"STREAMING STEP 3: REFINEMENT NEEDED - Primary Agent improving response")
             
             # Notify UI about Step 3 - refinement
             if self._ws_manager:
@@ -362,8 +362,8 @@ class Agent(BaseAgent):
                     },
                 )
         else:
-            print(f"🔥 STREAMING STEP 3: APPROVED - Response approved by reviewer")
-            logger.info(f"🔥 STREAMING STEP 3: APPROVED - Response approved by reviewer")
+            print(f"STREAMING STEP 3: APPROVED - Response approved by reviewer")
+            logger.info(f"STREAMING STEP 3: APPROVED - Response approved by reviewer")
             
             # Notify UI about approval
             if self._ws_manager:
