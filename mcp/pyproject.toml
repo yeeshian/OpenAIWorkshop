@@ -1,31 +1,21 @@
 [project]
-name = "openaiworkshop-mcp"
+name = "mcp-service-aoai-workshop"
 version = "0.1.0"
-description = "Model Context Protocol services for the OpenAI Workshop."
+description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
+    "autogen-agentchat==0.7.4",
+    "autogen-ext[mcp]==0.7.4",
+    "faker==26.0.0",
+    "fastapi==0.116.1",
+    "fastmcp==2.12.0",
+    "flasgger==0.9.7.1",
+    "flask==3.1.2",
+    "mcp==1.13.1",
+    "openai==1.102.0",
+    "pyjwt[crypto]==2.10.1",
     "python-dotenv==1.1.0",
     "tenacity==8.5.0",
-    "openai==1.109.0",
-    "fastmcp==2.12.4",
-    "mcp==1.15.0",
-    "autogen-ext[mcp]==0.7.4",
-    "autogen-agentchat==0.7.4",
-    "fastapi==0.116.1",
-    "PyJWT[crypto]==2.10.1",
-    "tiktoken",
+    "tiktoken>=0.11.0",
 ]
-
-[dependency-groups]
-dev = [
-    "uv>=0.8.2,<0.9.0",
-    "pytest>=8.3.3",
-    "pytest-asyncio>=1.0.1",
-    "pytest-cov>=6.0.0",
-    "ruff>=0.6.9",
-]
-
-[tool.uv]
-package = false
-prerelease = "if-necessary-or-explicit"
