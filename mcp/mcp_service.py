@@ -1,8 +1,8 @@
 from fastmcp import FastMCP  
 from fastmcp.server.middleware import Middleware, MiddlewareContext  # added
-from typing import List, Optional, Dict, Any  
-from pydantic import BaseModel, Field  
-import sqlite3, os, json, math, asyncio, logging, time  
+from typing import Annotated, List, Optional, Dict, Any  
+from pydantic import BaseModel  
+import sqlite3, os, asyncio, logging, time  
 from datetime import datetime  
 from dotenv import load_dotenv  
 from fastmcp.server.middleware import Middleware, MiddlewareContext 
@@ -60,7 +60,7 @@ class PassthroughJWTVerifier(TokenVerifier):
         default_scopes: list[str] | None = None,
         default_claims: dict[str, Any] | None = None,
         required_scopes: list[str] | None = None,
-        resource_server_url: str | None = None,
+        base_url: str | None = None,
     ):
         """
         Initialize the passthrough token verifier.
@@ -70,10 +70,10 @@ class PassthroughJWTVerifier(TokenVerifier):
             default_scopes: Default scopes to assign to all tokens
             default_claims: Default claims to include in all tokens
             required_scopes: Required scopes for all tokens (still enforced)
-            resource_server_url: Resource server URL for TokenVerifier protocol
+            base_url: Public base URL for this resource server (used for metadata)
         """
         super().__init__(
-            resource_server_url=resource_server_url,
+            base_url=base_url,
             required_scopes=required_scopes,
         )
         
@@ -133,7 +133,7 @@ class PassthroughJWTVerifier(TokenVerifier):
 
 # ────────────────────────── FastMCP INITIALISATION ──────────────────────  
 # Check if authentication should be disabled
-DISABLE_AUTH = os.getenv("DISABLE_AUTH", "false").lower() in ("true", "1", "yes", "on")
+DISABLE_AUTH = os.getenv("DISABLE_AUTH", "true").lower() in ("true", "1", "yes", "on")
 
 # Check if passthrough authentication should be used (accepts any token)
 USE_PASSTHROUGH_AUTH = os.getenv("USE_PASSTHROUGH_AUTH", "true").lower() in ("true", "1", "yes", "on")
@@ -155,6 +155,7 @@ if not DISABLE_AUTH:
             default_client_id="passthrough-user",
             default_scopes=["query", "security"],  # Grant all needed scopes
             default_claims={"roles": ["query", "security"]},  # Include roles for middleware
+            base_url=PUBLIC_BASE_URL,
         )
     elif jwks_uri and issuer:
         # Use real JWT verification
@@ -170,8 +171,8 @@ if token_verifier and not DISABLE_AUTH:
     # This publishes resource metadata and makes 401 responses carry WWW-Authenticate  
     auth = RemoteAuthProvider(  
         token_verifier=token_verifier,  
-        authorization_servers=[issuer],  # tells clients where auth actually happens  
-        resource_server_url=PUBLIC_BASE_URL.rstrip("/") + "/mcp",  # used in WWW-Authenticate and metadata  
+        authorization_servers=[issuer] if issuer else [],  # tells clients where auth actually happens  
+        base_url=PUBLIC_BASE_URL,  # used to build resource metadata URLs
         resource_name="Contoso Customer API",  
     )  
   
@@ -262,11 +263,6 @@ class Promotion(BaseModel):
     discount_percent: Optional[int]  
   
   
-class KBSearchParams(BaseModel):  
-    query: str = Field(..., description="natural lanaguage query")  
-    topk: Optional[int] = Field(3, description="Number of top documents to return")  
-  
-  
 class KBDoc(BaseModel):  
     title: str  
     doc_type: str  
@@ -306,31 +302,6 @@ class SupportTicket(BaseModel):
     subject: str  
     description: str  
     cs_agent: str  
-  
-  
-class SubscriptionUpdateRequest(BaseModel):  
-    roaming_enabled: Optional[int] = None  
-    status: Optional[str] = None  
-    service_status: Optional[str] = None  
-    product_id: Optional[int] = None  
-    start_date: Optional[str] = None  
-    end_date: Optional[str] = None  
-    autopay_enabled: Optional[int] = None  
-    speed_tier: Optional[str] = None  
-    data_cap_gb: Optional[int] = None  
-  
-  
-# ─── simple arg models ───────────────────────────────────────────────────  
-class CustomerIdParam(BaseModel):  
-    customer_id: int  
-  
-  
-class SubscriptionIdParam(BaseModel):  
-    subscription_id: int  
-  
-  
-class InvoiceIdParam(BaseModel):  
-    invoice_id: int  
   
   
 # Normalized scope helpers
@@ -448,8 +419,10 @@ async def get_all_customers() -> List[CustomerSummary]:
   
   
 @mcp.tool(description="Get a full customer profile including their subscriptions")  
-async def get_customer_detail(params: CustomerIdParam) -> CustomerDetail:  
-    data = await get_customer_detail_async(params.customer_id)
+async def get_customer_detail(  
+    customer_id: Annotated[int, "Customer identifier value"],  
+) -> CustomerDetail:  
+    data = await get_customer_detail_async(customer_id)
     return CustomerDetail(**data)  
   
   
@@ -458,9 +431,11 @@ async def get_customer_detail(params: CustomerIdParam) -> CustomerDetail:
         "Detailed subscription view → invoices (with payments) + service incidents."  
     )  
 )  
-async def get_subscription_detail(params: SubscriptionIdParam) -> SubscriptionDetail:  
-    data = await get_subscription_detail_async(params.subscription_id)
-    
+async def get_subscription_detail(  
+    subscription_id: Annotated[int, "Subscription identifier value"],  
+) -> SubscriptionDetail:  
+    data = await get_subscription_detail_async(subscription_id)
+
     # Convert nested data to Pydantic models
     invoices = []
     for inv_data in data['invoices']:
@@ -473,22 +448,28 @@ async def get_subscription_detail(params: SubscriptionIdParam) -> SubscriptionDe
   
   
 @mcp.tool(description="Return invoice‑level payments list")  
-async def get_invoice_payments(params: InvoiceIdParam) -> List[Payment]:  
-    data = await get_invoice_payments_async(params.invoice_id)
+async def get_invoice_payments(  
+    invoice_id: Annotated[int, "Invoice identifier value"],  
+) -> List[Payment]:  
+    data = await get_invoice_payments_async(invoice_id)
     return [Payment(**r) for r in data]
   
   
 @mcp.tool(description="Record a payment for a given invoice and get new outstanding balance")  
-async def pay_invoice(invoice_id: int, amount: float, method: str = "credit_card") -> Dict[str, Any]:  
+async def pay_invoice(  
+    invoice_id: Annotated[int, "Invoice identifier value"],  
+    amount: Annotated[float, "Payment amount"],  
+    method: Annotated[str, "Payment method"] = "credit_card",  
+) -> Dict[str, Any]:  
     return await pay_invoice_async(invoice_id, amount, method)
   
   
 @mcp.tool(description="Daily data‑usage records for a subscription over a date range")  
 async def get_data_usage(  
-    subscription_id: int,  
-    start_date: str,  
-    end_date: str,  
-    aggregate: bool = False,  
+    subscription_id: Annotated[int, "Subscription identifier value"],  
+    start_date: Annotated[str, "Inclusive start date (YYYY-MM-DD)"],  
+    end_date: Annotated[str, "Inclusive end date (YYYY-MM-DD)"],  
+    aggregate: Annotated[bool, "Set to true for aggregate statistics"] = False,  
 ) -> List[DataUsageRecord] | Dict[str, Any]:  
     result = await get_data_usage_async(subscription_id, start_date, end_date, aggregate)
     if aggregate:
@@ -506,37 +487,46 @@ async def get_promotions() -> List[Promotion]:
     description="Promotions *eligible* for a given customer right now "  
     "(evaluates basic loyalty/date criteria)."  
 )  
-async def get_eligible_promotions(params: CustomerIdParam) -> List[Promotion]:  
-    data = await get_eligible_promotions_async(params.customer_id)
+async def get_eligible_promotions(  
+    customer_id: Annotated[int, "Customer identifier value"],  
+) -> List[Promotion]:  
+    data = await get_eligible_promotions_async(customer_id)
     return [Promotion(**r) for r in data]  
   
   
 # ─── Knowledge Base Search ───────────────────────────────────────────────  
 @mcp.tool(description="Semantic search on policy / procedure knowledge documents")  
-async def search_knowledge_base(params: KBSearchParams) -> List[KBDoc]:  
-    data = await search_knowledge_base_async(params.query, params.topk)
+async def search_knowledge_base(  
+    query: Annotated[str, "Natural language query"],  
+    topk: Annotated[int, "Number of top documents to return"] = 3,  
+) -> List[KBDoc]:  
+    data = await search_knowledge_base_async(query, topk)
     return [KBDoc(**r) for r in data]
   
   
 # ─── Security Logs ───────────────────────────────────────────────────────  
 @mcp.tool(description="Security events for a customer (newest first)")  
-async def get_security_logs(params: CustomerIdParam) -> List[SecurityLog]:  
-    data = await get_security_logs_async(params.customer_id)
+async def get_security_logs(  
+    customer_id: Annotated[int, "Customer identifier value"],  
+) -> List[SecurityLog]:  
+    data = await get_security_logs_async(customer_id)
     return [SecurityLog(**r) for r in data]
   
   
 # ─── Orders ──────────────────────────────────────────────────────────────  
 @mcp.tool(description="All orders placed by a customer")  
-async def get_customer_orders(params: CustomerIdParam) -> List[Order]:  
-    data = await get_customer_orders_async(params.customer_id)
+async def get_customer_orders(  
+    customer_id: Annotated[int, "Customer identifier value"],  
+) -> List[Order]:  
+    data = await get_customer_orders_async(customer_id)
     return [Order(**r) for r in data]
   
   
 # ─── Support Tickets ────────────────────────────────────────────────────  
 @mcp.tool(description="Retrieve support tickets for a customer (optionally filter by open status)")  
 async def get_support_tickets(  
-    customer_id: int,  
-    open_only: bool = False,  
+    customer_id: Annotated[int, "Customer identifier value"],  
+    open_only: Annotated[bool, "Filter to open tickets"] = False,  
 ) -> List[SupportTicket]:  
     data = await get_support_tickets_async(customer_id, open_only)
     return [SupportTicket(**r) for r in data]
@@ -544,12 +534,12 @@ async def get_support_tickets(
   
 @mcp.tool(description="Create a new support ticket for a customer")  
 async def create_support_ticket(  
-    customer_id: int,  
-    subscription_id: int,  
-    category: str,  
-    priority: str,  
-    subject: str,  
-    description: str,  
+    customer_id: Annotated[int, "Customer identifier value"],  
+    subscription_id: Annotated[int, "Subscription identifier value"],  
+    category: Annotated[str, "Ticket category"],  
+    priority: Annotated[str, "Ticket priority"],  
+    subject: Annotated[str, "Ticket subject"],  
+    description: Annotated[str, "Ticket description"],  
 ) -> SupportTicket:  
     data = await create_support_ticket_async(customer_id, subscription_id, category, priority, subject, description)
     return SupportTicket(**data)
@@ -565,34 +555,74 @@ class Product(BaseModel):
   
   
 @mcp.tool(description="List / search available products (optional category filter)")  
-async def get_products(category: Optional[str] = None) -> List[Product]:  
+async def get_products(  
+    category: Annotated[Optional[str], "Optional category filter"] = None,  
+) -> List[Product]:  
     data = await get_products_async(category)
     return [Product(**r) for r in data]
   
   
 @mcp.tool(description="Return a single product by ID")  
-async def get_product_detail(product_id: int) -> Product:  
+async def get_product_detail(  
+    product_id: Annotated[int, "Product identifier value"],  
+) -> Product:  
     data = await get_product_detail_async(product_id)
     return Product(**data)  
   
   
 # ─── Update Subscription ────────────────────────────────────────────────  
 @mcp.tool(description="Update one or more mutable fields on a subscription.")  
-async def update_subscription(subscription_id: int, update: SubscriptionUpdateRequest) -> dict:  
-    updates = update.dict(exclude_unset=True)
+async def update_subscription(  
+    subscription_id: Annotated[int, "Subscription identifier value"],  
+    status: Annotated[Optional[str], "New subscription status"] = None,  
+    service_status: Annotated[Optional[str], "New service status"] = None,  
+    product_id: Annotated[Optional[int], "Product identifier to switch to"] = None,  
+    start_date: Annotated[Optional[str], "Updated subscription start date (YYYY-MM-DD)"] = None,  
+    end_date: Annotated[Optional[str], "Updated subscription end date (YYYY-MM-DD)"] = None,  
+    autopay_enabled: Annotated[Optional[int], "Set autopay enabled flag (0 or 1)"] = None,  
+    roaming_enabled: Annotated[Optional[int], "Set roaming enabled flag (0 or 1)"] = None,  
+    speed_tier: Annotated[Optional[str], "New speed tier label"] = None,  
+    data_cap_gb: Annotated[Optional[int], "Updated data cap in GB"] = None,  
+) -> dict:  
+    updates: Dict[str, Any] = {}
+
+    if status is not None:
+        updates["status"] = status
+    if service_status is not None:
+        updates["service_status"] = service_status
+    if product_id is not None:
+        updates["product_id"] = product_id
+    if start_date is not None:
+        updates["start_date"] = start_date
+    if end_date is not None:
+        updates["end_date"] = end_date
+    if autopay_enabled is not None:
+        updates["autopay_enabled"] = autopay_enabled
+    if roaming_enabled is not None:
+        updates["roaming_enabled"] = roaming_enabled
+    if speed_tier is not None:
+        updates["speed_tier"] = speed_tier
+    if data_cap_gb is not None:
+        updates["data_cap_gb"] = data_cap_gb
     return await update_subscription_async(subscription_id, updates)
   
   
 # ─── Unlock Account ──────────────────────────────────────────────────────  
 @mcp.tool(description="Unlock a customer account locked for security reasons")  
-async def unlock_account(params: CustomerIdParam) -> dict:  
-    return await unlock_account_async(params.customer_id)
+async def unlock_account(  
+    customer_id: Annotated[int, "Customer identifier value"],  
+) -> dict:  
+    return await unlock_account_async(customer_id)
+  
   
   
 # ─── Billing summary ─────────────────────────────────────────────────────  
 @mcp.tool(description="What does a customer currently owe across all subscriptions?")  
-async def get_billing_summary(params: CustomerIdParam) -> Dict[str, Any]:  
-    return await get_billing_summary_async(params.customer_id)  
+async def get_billing_summary(  
+    customer_id: Annotated[int, "Customer identifier value"],  
+) -> Dict[str, Any]:  
+    return await get_billing_summary_async(customer_id)  
+  
   
   
 ##############################################################################  

@@ -34,6 +34,13 @@ class BaseAgent:
         self.chat_history.extend(messages)  
         self.state_store[f"{self.session_id}_chat_history"] = self.chat_history  
   
+    def set_websocket_manager(self, manager: Any) -> None:
+        """
+        Allow backend to inject WebSocket manager for streaming events.
+        Override in child class if streaming support is needed.
+        """
+        pass  # Default: no-op for agents that don't support streaming
+  
     async def chat_async(self, prompt: str) -> str:  
         """  
         Override in child class!  

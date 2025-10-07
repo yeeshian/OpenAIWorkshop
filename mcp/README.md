@@ -8,6 +8,26 @@ This repository illustrates how to design and operate production-grade MCP servi
 - **Advanced in user experience**, including long-running operations with live progress updates.  
   
 ---  
+ 
+## Quickstart with uv ⚡
+
+The MCP module now ships with a `pyproject.toml` and `uv.lock`, so you can manage environments with the
+[uv](https://github.com/astral-sh/uv) package manager:
+
+```cmd
+cd mcp
+uv sync          # create/refresh the virtual environment from pyproject + uv.lock
+uv run python mcp_service.py
+```
+
+When dependencies change, regenerate the compiled requirements file so Docker builds stay deterministic:
+
+```cmd
+uv pip compile pyproject.toml -o requirements.txt
+```
+
+`uv run` works with any entry-point, e.g. `uv run python mcp_service_agentic.py` for the agentic server.
+  
   
 ## MCP Security: Basic Security and Multi‑Tenant Security with APIM Integration  
   
@@ -97,7 +117,7 @@ flowchart TD
 ---  
   
 ### Multi-Tenant Design Flow  
-*(Detailed in [MULTI_TENANT_MCP_SECURITY.md](./MULTI_TENANT_MCP_SECURITY.md))*  
+*(Detailed in [MULTI_TENANT_MCP_SECURITY.md](MULTI_TENANT_MCP_SECURITY.md))*  
   
 1. A multi-tenant “frontend” app in your home tenant defines app roles.  
 2. Customer tenant admins consent and assign their users to roles in their Enterprise App.  
@@ -181,8 +201,8 @@ flowchart TD
 - **MCP tools server**: `mcp_service.py`    
   (`RemoteAuthProvider`, `JWTVerifier`/`Passthrough`, `AuthZMiddleware`, OAuth metadata route)  
 - **APIM policy**: `apim_inbound_policy.xml` (audience, tenant allow-list)  
-- **Design doc**: [`MULTI_TENANT_MCP_SECURITY.md`](./mcp/MULTI_TENANT_MCP_SECURITY.md)    
-- **General auth choices**: [`general_mcp_security.md`](`general_mcp_security.md`)  
+- **Design doc**: [`MULTI_TENANT_MCP_SECURITY.md`](/MULTI_TENANT_MCP_SECURITY.md)    
+- **General auth choices**: Broken link: `general_mcp_security.md`general_mcp_security.md  
   
 ### Agentic Intelligence  
 - **Agentic server**: `mcp_service_agentic.py` (Autogen + Azure OpenAI)  

@@ -1,4 +1,4 @@
-![alt text](media/image-1.png)
+![alt text](docs/media/image-1.png)
 # Microsoft AI Agentic Workshop Business Scenario 
   
 This document describes the business scenario for this AI Agentic Workshop from Microsoft. 

@@ -8,9 +8,10 @@ ENV PYTHONUNBUFFERED 1
 # Set a working directory  
 WORKDIR /app  
   
-# Install dependencies  
-COPY requirements.txt /app/  
-RUN pip install --upgrade pip && pip install -r requirements.txt  
+# Install dependencies with uv for faster resolution  
+COPY requirements.txt pyproject.toml uv.lock /app/  
+RUN pip install --no-cache-dir --upgrade pip uv \
+	&& uv pip install --system -r requirements.txt  
   
 # Copy the current directory contents into the container at /app  
 COPY . /app/  
