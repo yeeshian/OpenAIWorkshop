@@ -68,7 +68,44 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 2. Explore the [Business Scenario and Agent Design](./SCENARIO.md) to understand the workshop challenge.  
 3. Check out the **[Agent Framework Implementation Patterns](agentic_ai/agents/agent_framework/README.md)** to choose the right multi-agent approach (single-agent, Magentic orchestration, or handoff pattern).
 4. Dive into [System Architecture](./ARCHITECTURE.md) before building and customizing your agent solutions.  
-5. Utilize the [Support Guide](./SUPPORT.md) for troubleshooting and assistance.  
+5. Explore **[Workflow Examples & Production Demos](agentic_ai/workflow/)** to learn advanced orchestration patterns.
+6. Utilize the [Support Guide](./SUPPORT.md) for troubleshooting and assistance.  
+  
+---  
+  
+## Workflow Orchestration  
+  
+The workshop includes comprehensive **workflow orchestration** capabilities built on the Microsoft Agent Framework's Pregel-style execution engine. Workflows enable complex multi-agent coordination with type-safe messaging, checkpointing, and real-time observability.  
+  
+### 🎯 Featured Demo: Fraud Detection System  
+  
+A production-ready fraud detection workflow showcasing enterprise-grade patterns:  
+  
+- **Real-time React dashboard** with live workflow visualization  
+- **Fan-out/fan-in patterns** for parallel specialist agent analysis  
+- **Human-in-the-loop** analyst review with checkpointing  
+- **MCP tool integration** for customer data access  
+- **WebSocket streaming** for live event updates  
+  
+**[→ Try the Fraud Detection Demo](agentic_ai/workflow/fraud_detection/)**  
+  
+### 📚 Learning Resources  
+  
+| Resource | Description |  
+|----------|-------------|  
+| **[Workflow Architecture Guide](agentic_ai/workflow/README.md)** | Core concepts, execution model, and API reference |  
+| **[Human-in-the-Loop Patterns](agentic_ai/workflow/human-in-the-loop.md)** | Comprehensive guide to approval workflows |  
+| **[Fraud Detection Demo](agentic_ai/workflow/fraud_detection/)** | Production-ready workflow with real-time UI |  
+  
+### Key Capabilities  
+  
+✅ **Control Flow**: Switch/case routing, conditional edges, dynamic branching  
+✅ **Parallelism**: Fan-out/fan-in, concurrent execution, aggregation patterns  
+✅ **Checkpointing**: Pause/resume workflows, long-running processes, crash recovery  
+✅ **Human-in-the-Loop**: External approvals, RequestInfoExecutor, response handling  
+✅ **State Management**: Executor-local state, shared state, persistence  
+✅ **Observability**: OpenTelemetry tracing, event streaming, real-time monitoring  
+✅ **Composition**: Nested workflows, workflow-as-agent, modular design  
   
 ---  
   
