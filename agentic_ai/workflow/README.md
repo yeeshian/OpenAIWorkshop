@@ -145,3 +145,51 @@ workflow.run() returns WorkflowRunResult([WorkflowOutputEvent("DLROW OLLEH"), ..
 - Magentic multi-agent orchestration: `_magentic.py`.
 
 This architecture balances **expressiveness** (flexible routing, composition), **type safety** (runtime contract enforcement), **observability** (OpenTelemetry spans, event streams), and **durability** (checkpointing for long-running workflows), making it suitable for both simple pipelines and complex multi-agent systems.
+
+---
+
+## Demo: Fraud Detection Workflow
+
+### 🎯 Production-Ready Implementation
+
+A comprehensive fraud detection system showcasing enterprise workflow patterns:
+
+| Feature | Description |
+|---------|-------------|
+| **Architecture** | Fan-out/fan-in pattern with parallel specialist agents |
+| **Human-in-the-Loop** | Analyst review for high-risk cases with checkpointing |
+| **Real-Time UI** | React + FastAPI dashboard with WebSocket streaming |
+| **MCP Integration** | Filtered tool access for domain-specific analysis |
+| **Persistence** | Checkpoint storage for pause/resume workflows |
+
+**[→ Explore the Fraud Detection Demo](fraud_detection/)**
+
+---
+
+## Quick Start
+
+**Try the Fraud Detection Demo:**
+
+```bash
+# Terminal 1: Start MCP Server
+cd mcp
+uv run mcp_service.py
+
+# Terminal 2: Start Backend
+cd agentic_ai/workflow/fraud_detection
+uv run --prerelease allow backend.py
+
+# Terminal 3: Start Frontend
+cd agentic_ai/workflow/fraud_detection/ui
+npm install && npm run dev
+
+# Open browser: http://localhost:3000
+```
+
+---
+
+## Additional Resources
+
+- **[Human-in-the-Loop Guide](human-in-the-loop.md)** - Comprehensive HITL patterns
+- **[Agent Framework GitHub](https://github.com/microsoft/agent-framework)** - Official framework repository
+- **[API Documentation](https://github.com/microsoft/agent-framework/tree/main/docs)** - Detailed API reference

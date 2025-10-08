@@ -267,6 +267,16 @@ instructions=(
 8. **Type-Safe Messaging**: Pydantic models for all messages
 9. **Event Streaming**: Real-time workflow event monitoring
 
+## Recent Improvements
+
+### ✅ Fixed Issues (Latest)
+
+1. **Analyst Review Data Rendering**: Fixed dataclass serialization in `_serialize_analyst_request()` to properly display Risk Score, Recommended Action, Alert ID, and other assessment details in the UI.
+
+2. **Event Ordering**: Corrected event broadcast sequence so Analyst Review completion appears before Fraud Action execution, maintaining proper workflow visualization order.
+
+These fixes ensure the UI accurately reflects the workflow state and displays all relevant fraud assessment information during analyst review.
+
 ## Troubleshooting
 
 ### MCP Connection Fails
@@ -284,6 +294,13 @@ echo $AZURE_OPENAI_API_KEY
 echo $AZURE_OPENAI_CHAT_DEPLOYMENT
 echo $AZURE_OPENAI_ENDPOINT
 ```
+
+### Analyst Review Panel Not Showing Data
+
+This should now be fixed. If you still see issues:
+- Restart the backend server to load the updated code
+- Check browser console for WebSocket errors
+- Verify the MCP server is responding
 
 ### Workflow Hangs
 
