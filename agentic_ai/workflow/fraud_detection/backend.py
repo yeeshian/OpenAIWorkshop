@@ -209,6 +209,7 @@ SAMPLE_ALERTS = {
 
 def _serialize_analyst_request(event: RequestInfoEvent) -> dict[str, Any]:
     """Convert a RequestInfoEvent into a UI-friendly payload."""
+    from dataclasses import is_dataclass, asdict
 
     request_data = getattr(event, "data", None)
     assessment = getattr(request_data, "assessment", None)
@@ -216,6 +217,10 @@ def _serialize_analyst_request(event: RequestInfoEvent) -> dict[str, Any]:
     def serialize_assessment(data: Any) -> dict[str, Any]:
         if data is None:
             return {}
+        # Handle dataclasses first (FraudRiskAssessment is a dataclass)
+        if is_dataclass(data):
+            return asdict(data)
+        # Handle Pydantic models
         if hasattr(data, "model_dump"):
             return data.model_dump()
         if hasattr(data, "dict"):
@@ -760,6 +765,18 @@ async def continue_workflow(alert_id: str, responses: dict[str, Any], checkpoint
         logger.info(f"Starting run_stream_from_checkpoint with responses keys: {list(responses.keys())}")
         logger.info(f"Checkpoint ID: {effective_checkpoint_id}")
 
+        # Immediately broadcast analyst_review completion since the framework may not emit it
+        # The RequestInfoExecutor was waiting, and when we provide the response, it completes
+        # but this completion event is not always emitted in the event stream during resume
+        await manager.broadcast({
+            "alert_id": alert_id,
+            "type": "ExecutorCompletedEvent",
+            "event_type": "executor_completed",
+            "executor_id": "analyst_review",
+            "timestamp": datetime.now().isoformat(),
+        })
+        logger.info("Broadcast analyst_review completion event")
+
         # Track request info executors that completed during resume
         completed_request_executors = set()
         
@@ -833,18 +850,6 @@ async def continue_workflow(alert_id: str, responses: dict[str, Any], checkpoint
             
             # Small delay to ensure all events are sent to UI before completion message
             await asyncio.sleep(0.5)
-            
-            # Re-broadcast completion for request info executors that may have been missed
-            if 'completed_request_executors' in locals() and completed_request_executors:
-                for executor_id in completed_request_executors:
-                    await manager.broadcast({
-                        "alert_id": alert_id,
-                        "type": "ExecutorCompletedEvent",
-                        "event_type": "executor_completed",
-                        "executor_id": executor_id,
-                        "timestamp": datetime.now().isoformat(),
-                    })
-                    logger.info(f"Re-broadcast completion for {executor_id}")
             
             # Broadcast completion to UI
             await manager.broadcast(
