@@ -122,7 +122,7 @@ This example demonstrates a comprehensive fraud detection system using the Agent
 
 2. **MCP Server**:
    ```bash
-   export MCP_SERVER_URI="http://localhost:8000"
+   export MCP_SERVER_URI="http://localhost:8000/mcp"
    ```
 
 3. **Start MCP Server** (in separate terminal):
@@ -131,7 +131,7 @@ This example demonstrates a comprehensive fraud detection system using the Agent
    python mcp_service.py
    ```
 
-### Running the Workflow
+### Running the Workflow with command line
 
 ```bash
 cd agentic_ai/workflow/examples/fraud_detection
@@ -267,52 +267,6 @@ instructions=(
 8. **Type-Safe Messaging**: Pydantic models for all messages
 9. **Event Streaming**: Real-time workflow event monitoring
 
-## Recent Improvements
-
-### ✅ Fixed Issues (Latest)
-
-1. **Analyst Review Data Rendering**: Fixed dataclass serialization in `_serialize_analyst_request()` to properly display Risk Score, Recommended Action, Alert ID, and other assessment details in the UI.
-
-2. **Event Ordering**: Corrected event broadcast sequence so Analyst Review completion appears before Fraud Action execution, maintaining proper workflow visualization order.
-
-These fixes ensure the UI accurately reflects the workflow state and displays all relevant fraud assessment information during analyst review.
-
-## Troubleshooting
-
-### MCP Connection Fails
-
-Ensure MCP server is running:
-```bash
-curl http://localhost:8000/health
-```
-
-### Missing Environment Variables
-
-Check all required variables are set:
-```bash
-echo $AZURE_OPENAI_API_KEY
-echo $AZURE_OPENAI_CHAT_DEPLOYMENT
-echo $AZURE_OPENAI_ENDPOINT
-```
-
-### Analyst Review Panel Not Showing Data
-
-This should now be fixed. If you still see issues:
-- Restart the backend server to load the updated code
-- Check browser console for WebSocket errors
-- Verify the MCP server is responding
-
-### Workflow Hangs
-
-Check logs for executor errors. Each executor logs its progress.
-
-### Checkpoint Restoration
-
-To restore from checkpoint:
-```python
-checkpoint_id = workflow.get_latest_checkpoint_id()
-await workflow.restore_from_checkpoint(checkpoint_id)
-```
 
 ## Real-Time Workflow Visualizer UI
 
@@ -431,24 +385,6 @@ http://localhost:3000
 - Check WebSocket connection in DevTools
 - Verify events are being sent from backend
 
-## Next Steps
-
-- ✅ ~~Implement real-time UI for analyst review~~ (Completed)
-- Add database persistence for checkpoints (Redis, Cosmos DB)
-- Add metrics and monitoring (OpenTelemetry)
-- Integrate with actual fraud detection systems
-- Add multiple workflow instances for parallel alert processing
-- Implement escalation chains for critical cases
-- Add workflow history/replay to UI
-- Export workflow results to PDF
-- Add custom alert creation in UI
-
-## Related Examples
-
-- `human-in-the-loop/guessing_game_with_human_input.py` - Basic human-in-the-loop pattern
-- `agents/workflow_as_agent_human_in_the_loop_azure.py` - Azure-integrated human input
-- `control-flow/` - Switch/case and conditional routing examples
-- `parallelism/` - Fan-out and concurrent execution patterns
 
 ## License
 
