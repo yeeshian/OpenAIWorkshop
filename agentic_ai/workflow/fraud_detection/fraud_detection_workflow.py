@@ -916,7 +916,7 @@ async def main() -> None:
 
     # Load configuration
     azure_openai_key = os.getenv("AZURE_OPENAI_API_KEY")
-    azure_deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME")
+    azure_deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT")
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
     mcp_server_uri = os.getenv("MCP_SERVER_URI", "http://localhost:8000/mcp")
     if not all([azure_openai_key, azure_deployment, azure_endpoint]):

@@ -45,6 +45,15 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 - **🖥️ Advanced UI Options:**  
   - **React Frontend:** Real-time streaming visualization with agent internal processes, tool calls, orchestrator planning, and turn-by-turn history tracking
   - **Streamlit Frontend:** Simple, elegant chat interface for quick prototyping and demos
+
+- **🔄 Workflow Orchestration (NEW!):** Enterprise-grade workflow capabilities with [comprehensive orchestration patterns](agentic_ai/workflow/):
+  - **Pregel-style execution engine** for complex multi-agent coordination
+  - **Type-safe messaging** with runtime contract enforcement
+  - **Checkpointing & resume** for long-running workflows
+  - **Human-in-the-loop** approval patterns with RequestInfoExecutor
+  - **Control flow patterns**: Switch/case routing, fan-out/fan-in, conditional edges
+  - **Real-time observability**: OpenTelemetry tracing, event streaming, WebSocket updates
+  - 🎯 **[Featured Demo: Fraud Detection System](agentic_ai/workflow/fraud_detection/)** - Production-ready workflow with React dashboard
   
 - **Configurable LLM Backend:** Use the latest Azure OpenAI GPT models (e.g., GPT-5, GPT-4.1, GPT-4o).  
 - **MCP Server Integration:** Advanced tools to enhance agent orchestration and capabilities with Model Context Protocol.  
@@ -67,45 +76,9 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 1. Review the [Setup Instructions](./SETUP.md) for environment prerequisites and step-by-step installation.  
 2. Explore the [Business Scenario and Agent Design](./SCENARIO.md) to understand the workshop challenge.  
 3. Check out the **[Agent Framework Implementation Patterns](agentic_ai/agents/agent_framework/README.md)** to choose the right multi-agent approach (single-agent, Magentic orchestration, or handoff pattern).
-4. Dive into [System Architecture](./ARCHITECTURE.md) before building and customizing your agent solutions.  
-5. Explore **[Workflow Examples & Production Demos](agentic_ai/workflow/)** to learn advanced orchestration patterns.
+4. Try the **[Fraud Detection Workflow Demo](agentic_ai/workflow/fraud_detection/)** to see enterprise orchestration patterns in action.
+5. Dive into [System Architecture](./ARCHITECTURE.md) before building and customizing your agent solutions.  
 6. Utilize the [Support Guide](./SUPPORT.md) for troubleshooting and assistance.  
-  
----  
-  
-## Workflow Orchestration  
-  
-The workshop includes comprehensive **workflow orchestration** capabilities built on the Microsoft Agent Framework's Pregel-style execution engine. Workflows enable complex multi-agent coordination with type-safe messaging, checkpointing, and real-time observability.  
-  
-### 🎯 Featured Demo: Fraud Detection System  
-  
-A production-ready fraud detection workflow showcasing enterprise-grade patterns:  
-  
-- **Real-time React dashboard** with live workflow visualization  
-- **Fan-out/fan-in patterns** for parallel specialist agent analysis  
-- **Human-in-the-loop** analyst review with checkpointing  
-- **MCP tool integration** for customer data access  
-- **WebSocket streaming** for live event updates  
-  
-**[→ Try the Fraud Detection Demo](agentic_ai/workflow/fraud_detection/)**  
-  
-### 📚 Learning Resources  
-  
-| Resource | Description |  
-|----------|-------------|  
-| **[Workflow Architecture Guide](agentic_ai/workflow/README.md)** | Core concepts, execution model, and API reference |  
-| **[Human-in-the-Loop Patterns](agentic_ai/workflow/human-in-the-loop.md)** | Comprehensive guide to approval workflows |  
-| **[Fraud Detection Demo](agentic_ai/workflow/fraud_detection/)** | Production-ready workflow with real-time UI |  
-  
-### Key Capabilities  
-  
-✅ **Control Flow**: Switch/case routing, conditional edges, dynamic branching  
-✅ **Parallelism**: Fan-out/fan-in, concurrent execution, aggregation patterns  
-✅ **Checkpointing**: Pause/resume workflows, long-running processes, crash recovery  
-✅ **Human-in-the-Loop**: External approvals, RequestInfoExecutor, response handling  
-✅ **State Management**: Executor-local state, shared state, persistence  
-✅ **Observability**: OpenTelemetry tracing, event streaming, real-time monitoring  
-✅ **Composition**: Nested workflows, workflow-as-agent, modular design  
   
 ---  
   
