@@ -968,7 +968,7 @@ async def startup_event():
         logger.info(f"✓ MCP tool initialized at {mcp_server_uri}")
 
         # Initialize Azure OpenAI client
-        chat_client = AzureOpenAIChatClient(credential=AzureCliCredential())
+        chat_client = AzureOpenAIChatClient(credential=AzureCliCredential(), deployment_name=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"))
         logger.info("✓ Azure OpenAI client initialized")
 
         # Initialize checkpoint storage
