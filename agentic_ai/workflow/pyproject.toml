@@ -1,0 +1,22 @@
+[project]
+name = "applications"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi==0.115.12",
+    "agent-framework==1.0.0b251007",
+    "fastmcp==2.7.1",
+    "flasgger==0.9.7.1",
+    "flask==3.0.3",
+    "httpx==0.28.1",
+    "msal==1.31.0",
+    "openai>=1.90.0,<1.110.0",
+    "pydantic==2.11.4",
+    "requests==2.32.4",
+    "streamlit==1.45.0",
+    "tenacity==8.5.0",
+    "uvicorn>=0.25.0",
+    "websockets>=15.0.1",
+]
