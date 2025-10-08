@@ -209,6 +209,7 @@ SAMPLE_ALERTS = {
 
 def _serialize_analyst_request(event: RequestInfoEvent) -> dict[str, Any]:
     """Convert a RequestInfoEvent into a UI-friendly payload."""
+    from dataclasses import is_dataclass, asdict
 
     request_data = getattr(event, "data", None)
     assessment = getattr(request_data, "assessment", None)
@@ -216,6 +217,10 @@ def _serialize_analyst_request(event: RequestInfoEvent) -> dict[str, Any]:
     def serialize_assessment(data: Any) -> dict[str, Any]:
         if data is None:
             return {}
+        # Handle dataclasses first (FraudRiskAssessment is a dataclass)
+        if is_dataclass(data):
+            return asdict(data)
+        # Handle Pydantic models
         if hasattr(data, "model_dump"):
             return data.model_dump()
         if hasattr(data, "dict"):
