@@ -107,10 +107,10 @@ function EventLog({ events }) {
   };
 
   return (
-    <Paper elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Typography variant="h6">Event Log</Typography>
-        <Typography variant="caption" color="text.secondary">
+    <Paper elevation={3} sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
+        <Typography variant="subtitle1" fontWeight="bold">Event Log</Typography>
+        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
           {events.length} events
         </Typography>
       </Box>
@@ -120,13 +120,27 @@ function EventLog({ events }) {
         sx={{
           flex: 1,
           overflow: 'auto',
-          px: 1,
+          px: 0.5,
           py: 0,
+          minHeight: 0,
+          '&::-webkit-scrollbar': {
+            width: '8px',
+          },
+          '&::-webkit-scrollbar-track': {
+            backgroundColor: 'grey.100',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'grey.400',
+            borderRadius: '4px',
+            '&:hover': {
+              backgroundColor: 'grey.600',
+            },
+          },
         }}
       >
         {events.length === 0 ? (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
+          <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Typography variant="caption" color="text.secondary">
               No events yet. Start a workflow to see events.
             </Typography>
           </Box>
@@ -135,38 +149,38 @@ function EventLog({ events }) {
             <React.Fragment key={index}>
               <ListItem
                 sx={{
-                  py: 1.5,
-                  px: 1,
+                  py: 0.75,
+                  px: 0.75,
                   '&:hover': {
                     bgcolor: 'action.hover',
                   },
                 }}
               >
-                <ListItemIcon sx={{ minWidth: 40 }}>
-                  {getEventIcon(event)}
+                <ListItemIcon sx={{ minWidth: 32 }}>
+                  {React.cloneElement(getEventIcon(event), { fontSize: 'small' })}
                 </ListItemIcon>
                 <ListItemText
                   primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Typography variant="body2" fontWeight="medium">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                      <Typography variant="caption" fontWeight="medium" sx={{ fontSize: '0.75rem' }}>
                         {getEventTitle(event)}
                       </Typography>
                       <Chip
                         label={event.event_type || event.type}
                         size="small"
                         color={getEventColor(event)}
-                        sx={{ height: 20, fontSize: 10 }}
+                        sx={{ height: 16, fontSize: '0.65rem' }}
                       />
                     </Box>
                   }
                   secondary={
-                    <Typography variant="caption" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
                       {formatTime(event.timestamp)}
                     </Typography>
                   }
                 />
               </ListItem>
-              {index < events.length - 1 && <Divider variant="inset" component="li" />}
+              {index < events.length - 1 && <Divider variant="inset" component="li" sx={{ ml: 4 }} />}
             </React.Fragment>
           ))
         )}

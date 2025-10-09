@@ -204,6 +204,14 @@ SAMPLE_ALERTS = {
         timestamp=datetime.now().isoformat(),
         severity="high",
     ),
+    "ALERT-004": SuspiciousActivityAlert(
+        alert_id="ALERT-004",
+        customer_id=4,
+        alert_type="routine_check",
+        description="Routine security check - password changed from usual device",
+        timestamp=datetime.now().isoformat(),
+        severity="low",
+    ),
 }
 
 

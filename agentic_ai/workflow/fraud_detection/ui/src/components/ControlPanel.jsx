@@ -53,28 +53,29 @@ function ControlPanel({ alerts, onStartWorkflow, workflowRunning, selectedAlert 
   };
 
   return (
-    <Paper elevation={3} sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Typography variant="h6" gutterBottom>
+    <Paper elevation={3} sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <Typography variant="subtitle1" fontWeight="bold" sx={{ mb: 0.5 }}>
         Workflow Control
       </Typography>
 
-      <FormControl fullWidth>
-        <InputLabel>Select Alert</InputLabel>
+      <FormControl fullWidth size="small">
+        <InputLabel sx={{ fontSize: '0.875rem' }}>Select Alert</InputLabel>
         <Select
           value={selectedAlertId}
           label="Select Alert"
           onChange={(e) => setSelectedAlertId(e.target.value)}
           disabled={workflowRunning}
+          sx={{ fontSize: '0.875rem' }}
         >
           {alerts.map((alert) => (
-            <MenuItem key={alert.alert_id} value={alert.alert_id}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+            <MenuItem key={alert.alert_id} value={alert.alert_id} sx={{ py: 0.75 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, width: '100%' }}>
                 {getSeverityIcon(alert.severity)}
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="body2" fontWeight="bold">
+                  <Typography variant="caption" fontWeight="bold" display="block">
                     {alert.alert_id}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
                     {alert.alert_type}
                   </Typography>
                 </Box>
@@ -82,6 +83,7 @@ function ControlPanel({ alerts, onStartWorkflow, workflowRunning, selectedAlert 
                   label={alert.severity}
                   size="small"
                   color={getSeverityColor(alert.severity)}
+                  sx={{ height: 18, fontSize: '0.7rem' }}
                 />
               </Box>
             </MenuItem>
@@ -90,23 +92,25 @@ function ControlPanel({ alerts, onStartWorkflow, workflowRunning, selectedAlert 
       </FormControl>
 
       {selectedAlertId && !workflowRunning && (
-        <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-          <Typography variant="body2" color="text.secondary" gutterBottom>
+        <Box sx={{ p: 1, bgcolor: 'grey.100', borderRadius: 1 }}>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
             <strong>Description:</strong>
           </Typography>
-          <Typography variant="body2">
+          <Typography variant="caption" display="block" sx={{ mb: 0.5 }}>
             {alerts.find((a) => a.alert_id === selectedAlertId)?.description}
           </Typography>
-          <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             <Chip
               label={`Customer ${alerts.find((a) => a.alert_id === selectedAlertId)?.customer_id}`}
               size="small"
               variant="outlined"
+              sx={{ height: 18, fontSize: '0.7rem' }}
             />
             <Chip
               label={alerts.find((a) => a.alert_id === selectedAlertId)?.alert_type}
               size="small"
               variant="outlined"
+              sx={{ height: 18, fontSize: '0.7rem' }}
             />
           </Box>
         </Box>
@@ -114,22 +118,22 @@ function ControlPanel({ alerts, onStartWorkflow, workflowRunning, selectedAlert 
 
       <Button
         variant="contained"
-        size="large"
+        size="small"
         fullWidth
-        startIcon={workflowRunning ? <CircularProgress size={20} color="inherit" /> : <PlayArrowIcon />}
+        startIcon={workflowRunning ? <CircularProgress size={16} color="inherit" /> : <PlayArrowIcon fontSize="small" />}
         onClick={handleStartClick}
         disabled={!selectedAlertId || workflowRunning}
-        sx={{ mt: 1 }}
+        sx={{ mt: 0.5, py: 0.75, fontSize: '0.875rem' }}
       >
-        {workflowRunning ? 'Workflow Running...' : 'Start Workflow'}
+        {workflowRunning ? 'Running...' : 'Start Workflow'}
       </Button>
 
       {selectedAlert && workflowRunning && (
-        <Box sx={{ p: 2, bgcolor: 'primary.main', color: 'white', borderRadius: 1 }}>
-          <Typography variant="body2" fontWeight="bold">
+        <Box sx={{ p: 1, bgcolor: 'primary.main', color: 'white', borderRadius: 1 }}>
+          <Typography variant="caption" fontWeight="bold" display="block">
             Active Workflow
           </Typography>
-          <Typography variant="caption">
+          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
             Processing {selectedAlert.alert_id}
           </Typography>
         </Box>
