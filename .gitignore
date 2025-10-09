@@ -9,6 +9,9 @@ mcp.json
 *.py[cod]
 *$py.class
 videos
+**/checkpoints
+**/reference
+**/examples
 **/fastmcp
 # C extensions
 *.so

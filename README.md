@@ -45,6 +45,15 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 - **🖥️ Advanced UI Options:**  
   - **React Frontend:** Real-time streaming visualization with agent internal processes, tool calls, orchestrator planning, and turn-by-turn history tracking
   - **Streamlit Frontend:** Simple, elegant chat interface for quick prototyping and demos
+
+- **🔄 Workflow Orchestration (NEW!):** Enterprise-grade workflow capabilities with [comprehensive orchestration patterns](agentic_ai/workflow/):
+  - **Pregel-style execution engine** for complex multi-agent coordination
+  - **Type-safe messaging** with runtime contract enforcement
+  - **Checkpointing & resume** for long-running workflows
+  - **Human-in-the-loop** approval patterns with RequestInfoExecutor
+  - **Control flow patterns**: Switch/case routing, fan-out/fan-in, conditional edges
+  - **Real-time observability**: OpenTelemetry tracing, event streaming, WebSocket updates
+  - 🎯 **[Featured Demo: Fraud Detection System](agentic_ai/workflow/fraud_detection/)** - Production-ready workflow with React dashboard
   
 - **Configurable LLM Backend:** Use the latest Azure OpenAI GPT models (e.g., GPT-5, GPT-4.1, GPT-4o).  
 - **MCP Server Integration:** Advanced tools to enhance agent orchestration and capabilities with Model Context Protocol.  
@@ -67,8 +76,9 @@ Welcome to the official repository for the Microsoft AI Agentic Workshop! This r
 1. Review the [Setup Instructions](./SETUP.md) for environment prerequisites and step-by-step installation.  
 2. Explore the [Business Scenario and Agent Design](./SCENARIO.md) to understand the workshop challenge.  
 3. Check out the **[Agent Framework Implementation Patterns](agentic_ai/agents/agent_framework/README.md)** to choose the right multi-agent approach (single-agent, Magentic orchestration, or handoff pattern).
-4. Dive into [System Architecture](./ARCHITECTURE.md) before building and customizing your agent solutions.  
-5. Utilize the [Support Guide](./SUPPORT.md) for troubleshooting and assistance.  
+4. Try the **[Fraud Detection Workflow Demo](agentic_ai/workflow/fraud_detection/)** to see enterprise orchestration patterns in action.
+5. Dive into [System Architecture](./ARCHITECTURE.md) before building and customizing your agent solutions.  
+6. Utilize the [Support Guide](./SUPPORT.md) for troubleshooting and assistance.  
   
 ---  
   
