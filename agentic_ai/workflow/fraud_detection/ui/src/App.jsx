@@ -68,8 +68,14 @@ function App() {
     try {
       const event = lastMessage;
 
-      // Add to event log
-      setEvents((prev) => [...prev, event]);
+      // Add to event log - prevent duplicates by checking timestamp + type + executor_id
+      setEvents((prev) => {
+        const eventKey = `${event.timestamp}-${event.type || event.event_type}-${event.executor_id || ''}`;
+        const isDuplicate = prev.some(
+          (e) => `${e.timestamp}-${e.type || e.event_type}-${e.executor_id || ''}` === eventKey
+        );
+        return isDuplicate ? prev : [...prev, event];
+      });
 
       // Handle workflow initialization
       if (event.type === 'workflow_initializing') {
@@ -212,7 +218,7 @@ function App() {
             </Grid>
 
             {/* Right Column - Event Log */}
-            <Grid item xs={12} md={3}>
+            <Grid item xs={12} md={3} sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
               <EventLog events={events} />
             </Grid>
           </Grid>

@@ -58,10 +58,10 @@ function AnalystDecisionPanel({ decision, onSubmit }) {
     <Paper
       elevation={3}
       sx={{
-        p: 3,
+        p: 1.5,
         display: 'flex',
         flexDirection: 'column',
-        gap: 2,
+        gap: 1,
         border: 3,
         borderColor: 'warning.main',
         animation: 'pulse 2s ease-in-out infinite',
@@ -71,51 +71,49 @@ function AnalystDecisionPanel({ decision, onSubmit }) {
         },
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <GavelIcon color="warning" />
-        <Typography variant="h6">Analyst Review Required</Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <GavelIcon color="warning" fontSize="small" />
+        <Typography variant="subtitle1" fontWeight="bold">Analyst Review Required</Typography>
       </Box>
 
-      <Alert severity="warning" sx={{ mb: 1 }}>
-        <Typography variant="body2" fontWeight="bold">
+      <Alert severity="warning" sx={{ py: 0.25, px: 1 }}>
+        <Typography variant="caption" fontWeight="bold">
           Human Decision Needed
-        </Typography>
-        <Typography variant="caption">
-          The workflow is paused pending your review
         </Typography>
       </Alert>
 
-      <Divider />
+      <Divider sx={{ my: 0.5 }} />
 
       {/* Risk Assessment */}
       <Box>
-        <Typography variant="subtitle2" gutterBottom>
+        <Typography variant="caption" fontWeight="bold" display="block" sx={{ mb: 0.5 }}>
           Risk Assessment
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 1 }}>
-          <Typography variant="body2">Risk Score:</Typography>
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 0.5 }}>
+          <Typography variant="caption">Risk Score:</Typography>
           <Chip
             label={`${(decision.data?.risk_score || 0).toFixed(2)} - ${getRiskLevel(
               decision.data?.risk_score || 0
             )}`}
             color={getRiskColor(decision.data?.risk_score || 0)}
             size="small"
+            sx={{ height: 20, fontSize: '0.7rem' }}
           />
         </Box>
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          <Typography variant="body2">Alert ID:</Typography>
-          <Chip label={decision.data?.alert_id} size="small" variant="outlined" />
+        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+          <Typography variant="caption">Alert ID:</Typography>
+          <Chip label={decision.data?.alert_id} size="small" variant="outlined" sx={{ height: 20, fontSize: '0.7rem' }} />
         </Box>
       </Box>
 
       {/* Reasoning */}
       {decision.data?.reasoning && (
         <Box>
-          <Typography variant="subtitle2" gutterBottom>
+          <Typography variant="caption" fontWeight="bold" display="block" sx={{ mb: 0.5 }}>
             AI Analysis
           </Typography>
-          <Paper variant="outlined" sx={{ p: 1.5, bgcolor: 'grey.50', maxHeight: 150, overflow: 'auto' }}>
-            <Typography variant="caption" sx={{ whiteSpace: 'pre-wrap' }}>
+          <Paper variant="outlined" sx={{ p: 0.75, bgcolor: 'grey.50', maxHeight: 80, overflow: 'auto' }}>
+            <Typography variant="caption" sx={{ whiteSpace: 'pre-wrap', fontSize: '0.7rem' }}>
               {decision.data.reasoning}
             </Typography>
           </Paper>
@@ -124,7 +122,7 @@ function AnalystDecisionPanel({ decision, onSubmit }) {
 
       {/* Recommended Action */}
       <Box>
-        <Typography variant="subtitle2" gutterBottom>
+        <Typography variant="caption" fontWeight="bold" display="block" sx={{ mb: 0.5 }}>
           Recommended Action
         </Typography>
         <Chip
@@ -136,22 +134,24 @@ function AnalystDecisionPanel({ decision, onSubmit }) {
             ACTION_OPTIONS.find((opt) => opt.value === decision.data?.recommended_action)
               ?.color || 'default'
           }
-          size="medium"
+          size="small"
+          sx={{ height: 20, fontSize: '0.7rem' }}
         />
       </Box>
 
-      <Divider />
+      <Divider sx={{ my: 0.5 }} />
 
       {/* Decision Form */}
-      <FormControl fullWidth>
-        <InputLabel>Your Decision</InputLabel>
+      <FormControl fullWidth size="small" sx={{ minHeight: 40 }}>
+        <InputLabel sx={{ fontSize: '0.875rem' }}>Your Decision</InputLabel>
         <Select
           value={selectedAction}
           label="Your Decision"
           onChange={(e) => setSelectedAction(e.target.value)}
+          sx={{ fontSize: '0.875rem' }}
         >
           {ACTION_OPTIONS.map((option) => (
-            <MenuItem key={option.value} value={option.value}>
+            <MenuItem key={option.value} value={option.value} sx={{ fontSize: '0.875rem' }}>
               {option.label}
             </MenuItem>
           ))}
@@ -161,20 +161,23 @@ function AnalystDecisionPanel({ decision, onSubmit }) {
       <TextField
         label="Analyst Notes"
         multiline
-        rows={3}
+        rows={2}
         fullWidth
+        size="small"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        placeholder="Add your analysis and reasoning..."
+        placeholder="Add notes..."
+        sx={{ '& .MuiInputBase-input': { fontSize: '0.875rem' } }}
       />
 
       <Button
         variant="contained"
         color="primary"
-        size="large"
+        size="small"
         fullWidth
-        startIcon={<SendIcon />}
+        startIcon={<SendIcon fontSize="small" />}
         onClick={handleSubmit}
+        sx={{ mt: 0.5, py: 0.75 }}
       >
         Submit Decision
       </Button>
