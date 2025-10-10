@@ -33,6 +33,30 @@ class Agent(BaseAgent):
         self._ws_manager = manager
         logger.info(f"[STREAMING] WebSocket manager set for reflection_agent, session_id={self.session_id}")
 
+    def _extract_refined_content(self, response: str) -> str:
+        """
+        Extract refined content from agent response, avoiding internal communication.
+        Based on teammate feedback to ensure clean content extraction.
+        """
+        # Look for structured content markers
+        if "##REFINED_CONTENT:" in response and "##END" in response:
+            try:
+                # Extract content between markers
+                start_marker = "##REFINED_CONTENT:"
+                end_marker = "##END"
+                start_idx = response.find(start_marker) + len(start_marker)
+                end_idx = response.find(end_marker)
+                if start_idx > len(start_marker) - 1 and end_idx > start_idx:
+                    extracted = response[start_idx:end_idx].strip()
+                    print(f"[PARSING] Successfully extracted refined content: {len(extracted)} chars")
+                    return extracted
+            except Exception as e:
+                print(f"[PARSING] Error extracting structured content: {e}")
+        
+        # Fallback: return full response if no structured format found
+        print(f"[PARSING] No structured format found, using full response")
+        return response
+
     async def _setup_reflection_agents(self) -> None:
         if self._initialized:
             return
@@ -64,7 +88,12 @@ class Agent(BaseAgent):
                 "When a customer provides an ID or asks about their account, use the tools to retrieve accurate, up-to-date information. "
                 "If the user input is just an ID or feels incomplete, review previous communication in the same session and infer the user's intent based on context. "
                 "For example, if they ask about billing and then provide an ID, assume they want billing information for that ID. "
-                "Always be helpful, professional, and provide detailed information when available.",
+                "Always be helpful, professional, and provide detailed information when available. "
+                "\n\nIMPORTANT: When responding to reviewer feedback for refinement, format your response exactly as follows:\n"
+                "##REFINED_CONTENT:\n"
+                "[Your improved response here]\n"
+                "##END\n"
+                "This ensures clean content extraction without mixing internal communication with the final response.",
             tools=tools,
             model=self.openai_model_name,
         )
@@ -312,7 +341,20 @@ class Agent(BaseAgent):
                     },
                 )
 
-            refinement_request = f"Please improve your customer support response based on this feedback:\n\nOriginal Question: {prompt}\n\nYour Response: {initial_response}\n\nReviewer Feedback: {feedback_result_text}"
+            refinement_request = f"""Please improve your customer support response based on this feedback:
+
+Original Question: {prompt}
+
+Your Response: {initial_response}
+
+Reviewer Feedback: {feedback_result_text}
+
+IMPORTANT: Format your refined response exactly as follows:
+##REFINED_CONTENT:
+[Your improved response here]
+##END
+
+Do not include phrases like "Thank you for the feedback" or other meta-commentary. Place only the refined customer support response between the markers."""
             
             # Stream refinement response
             refinement_response = []
@@ -348,7 +390,13 @@ class Agent(BaseAgent):
                 logger.error("[REFLECTION] Error during Step 3 streaming: %s", exc, exc_info=True)
                 raise
 
-            assistant_response = ''.join(refinement_response)
+            raw_refinement_response = ''.join(refinement_response)
+            
+            # Extract clean content using structured parsing (addresses teammate feedback)
+            assistant_response = self._extract_refined_content(raw_refinement_response)
+            
+            print(f"STREAMING STEP 3: Content extraction - Original: {len(raw_refinement_response)} chars, Extracted: {len(assistant_response)} chars")
+            logger.info(f"STREAMING STEP 3: Content extraction - Original: {len(raw_refinement_response)} chars, Extracted: {len(assistant_response)} chars")
             
             # Send complete refinement response
             if self._ws_manager:
@@ -459,9 +507,23 @@ class Agent(BaseAgent):
             logger.info(f"[REFLECTION] Reviewer suggested improvements, sending back to Primary Agent...")
             logger.info(f"[REFLECTION] ===============================================")
             
-            refinement_request = f"Please improve your customer support response based on this feedback:\n\nOriginal Question: {prompt}\n\nYour Response: {initial_result.text}\n\nReviewer Feedback: {feedback.text}"
+            refinement_request = f"""Please improve your customer support response based on this feedback:
+
+Original Question: {prompt}
+
+Your Response: {initial_result.text}
+
+Reviewer Feedback: {feedback.text}
+
+IMPORTANT: Format your refined response exactly as follows:
+##REFINED_CONTENT:
+[Your improved response here]
+##END
+
+Do not include phrases like "Thank you for the feedback" or other meta-commentary. Place only the refined customer support response between the markers."""
             final_result = await self._primary_agent.run(refinement_request, thread=self._thread)
-            assistant_response = final_result.text
+            raw_response = final_result.text
+            assistant_response = self._extract_refined_content(raw_response)
             
             logger.info(f"[REFLECTION] ===============================================")
             logger.info(f"[REFLECTION] STEP 3 COMPLETED: Primary Agent Refined Response")
