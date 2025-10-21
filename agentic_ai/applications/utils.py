@@ -42,14 +42,28 @@ except ImportError:
 
   
 def make_json_serializable(obj):  
+    """
+    Convert objects to JSON-serializable format.
+    Handles Agent Framework objects like ChatMessage, datetime, and nested structures.
+    """
     if isinstance(obj, dict):  
         return {k: make_json_serializable(v) for k, v in obj.items()}  
     elif isinstance(obj, list):  
         return [make_json_serializable(i) for i in obj]  
     elif isinstance(obj, datetime):  
-        return obj.isoformat()  
+        return obj.isoformat()
+    elif hasattr(obj, '__dict__'):
+        # Handle objects with __dict__ (like ChatMessage from Agent Framework)
+        return make_json_serializable(obj.__dict__)
+    elif hasattr(obj, 'model_dump'):
+        # Handle Pydantic v2 models
+        return obj.model_dump()
+    elif hasattr(obj, 'dict'):
+        # Handle Pydantic v1 models
+        return obj.dict()
     else:  
-        return obj  
+        return obj
+      
 # ---------------------------------------------------------------------------  
 # Cosmos-backed implementation  
 # ---------------------------------------------------------------------------  
@@ -144,11 +158,13 @@ class CosmosDBStateStore(abc.MutableMapping):
         return default if doc is None else doc["value"]  
   
     def __setitem__(self, session_id: str, value: Any) -> None:  
+        # Ensure value is JSON-serializable before upserting
+        serializable_value = make_json_serializable(value)
         self.container.upsert_item(  
             {  
                 "id": session_id,          # unique within a tenant  
                 "tenant_id": self.tenant_id,  
-                "value": value,  
+                "value": serializable_value,  
             }  
         )  
   
