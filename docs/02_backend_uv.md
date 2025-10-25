@@ -126,6 +126,11 @@ In this part, you will configure and run the backend service for the Microsoft A
     ```bash
     `curl -X 'POST' 'http://localhost:7000/chat'  -H 'accept: application/json'  -H 'Content-Type: application/json'  -d '{"session_id": "123", "prompt": "What can you help me with?"}'`
     ```
+
+    **Note:** The local server does not return the AI response, if you view from the browser this is expected.
+
+    <img width="188" height="104" alt="image" src="https://github.com/user-attachments/assets/69595c07-c55c-4f07-9b92-63e915ab8f41" />
+
 - Ready to connect to frontend
 
 **Next Step**: Choose your frontend - [React Frontend (Recommended)](03_frontend_react.md) | [Streamlit Frontend](03_frontend_streamlit_uv.md)
