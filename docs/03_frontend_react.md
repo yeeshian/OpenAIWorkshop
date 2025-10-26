@@ -72,6 +72,8 @@ The React frontend connects to `http://localhost:7000` by default.
 - You can interact with the AI agent through the chat interface
 - Real-time streaming and agent process visibility are working
 
+<img width="1235" height="480" alt="image" src="https://github.com/user-attachments/assets/953d0e1f-de70-48b4-b699-0677e9a6e67f" />
+
 ## Troubleshooting
 - **Port 3000 already in use?** The React app will prompt you to use a different port. Type `Y` to accept.
 - **npm install fails?** Try clearing npm cache: `npm cache clean --force` and retry.

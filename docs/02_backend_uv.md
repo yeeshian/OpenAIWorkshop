@@ -97,7 +97,40 @@ In this part, you will configure and run the backend service for the Microsoft A
 - Backend service is running on `http://localhost:7000`
 - Agent Framework is properly configured
 - Backend can communicate with MCP server
-  - A sample curl command to validate things are online: `curl -X 'POST' 'http://localhost:7000/chat'  -H 'accept: application/json'  -H 'Content-Type: application/json'  -d '{"session_id": "123", "prompt": "What can you help me with?"}'`
+  - A sample powershell commande to validate backend server:
+    ```powershell
+    # Define the URL
+    $uri = "http://localhost:7000/chat"
+  
+    # Define headers
+    $headers = @{
+        Accept = "application/json"
+        "Content-Type" = "application/json"
+    }
+    
+    # Define the JSON body
+    $body = @{
+        session_id = "123"
+        prompt     = "What can you help me with?"
+    } | ConvertTo-Json
+    
+    # Send the POST request
+    $response = Invoke-WebRequest -Uri $uri -Method POST -Headers $headers -Body $body
+    
+    # Output the response
+    $response.Content
+    ```
+    <img alt="image" src="https://github.com/user-attachments/assets/1f8b992b-3d0e-40c9-8000-484f88e64db5" />
+ 
+  - A sample curl command to validate things are online:
+    ```bash
+    `curl -X 'POST' 'http://localhost:7000/chat'  -H 'accept: application/json'  -H 'Content-Type: application/json'  -d '{"session_id": "123", "prompt": "What can you help me with?"}'`
+    ```
+
+    **Note:** The local server does not return the AI response, if you view from the browser this is expected.
+
+    <img width="188" height="104" alt="image" src="https://github.com/user-attachments/assets/69595c07-c55c-4f07-9b92-63e915ab8f41" />
+
 - Ready to connect to frontend
 
 **Next Step**: Choose your frontend - [React Frontend (Recommended)](03_frontend_react.md) | [Streamlit Frontend](03_frontend_streamlit_uv.md)

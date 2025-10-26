@@ -48,12 +48,27 @@ In this part, you will set up the MCP (Model Control Protocol) for the Microsoft
     cd mcp
     uv run python mcp_service.py
     ```
-    > Note: Let the MCP server run in this terminal window. Open a new terminal window to proceed to the next step. 
+    > Note: Let the MCP server run in this terminal window. Open a new terminal window to proceed to the next step.
+    <img width="422" height="379" alt="image" src="https://github.com/user-attachments/assets/fe7d7f17-1d96-4718-af31-c8f927b21619" />
+
 ## Success criteria
 - MCP server is running and ready to accept requests.
-- A sample curl command for ensuring the MCP server is online: 
-`curl -sS -i -X POST "http://localhost:8000/mcp" -H "Accept: application/json, text/event-stream" -H 'Content-Type: application/json'  --data '{"jsonrpc":"2.0","id":"init-1","method":"initialize", "params":{"protocolVersion":"2024-11-05","capabilities":{}, "clientInfo":{"name":"curl","version":"8"}}}'`
+- A sample powershell command for checking the MCP server status:  
+    ```powershell
+    Invoke-WebRequest -Uri "http://localhost:8000/mcp" -Method POST -Headers @{Accept="application/json, text/event-stream";"Content-Type"="application/json"} -Body               '{"jsonrpc":"2.0","id":"init-1","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"8"}}}'
+    ```
+    <img width="269" height="232" alt="image" src="https://github.com/user-attachments/assets/b1dd58f8-68ff-4acd-9e29-df8b4d414808" />
+    
+    **Note:** This is an MCP server endpoint and cannot be accessed directly via a browser or unsupported transports like SSE. Please use a streamable HTTP transport. This error is expected on your browser.
+  
+    <img width="394" height="160" alt="image" src="https://github.com/user-attachments/assets/268b8b2b-9952-4aa0-9b9d-5085016ec130" />
 
+ - A sample curl command for ensuring the MCP server is online:
+    ```bash
+    curl -sS -i -X POST "http://localhost:8000/mcp" -H "Accept: application/json, text/event-stream" -H 'Content-Type: application/json'  --data '{"jsonrpc":"2.0","id":"init-            1","method":"initialize", "params":{"protocolVersion":"2024-11-05","capabilities":{}, "clientInfo":{"name":"curl","version":"8"}}}'`
+    ```
+
+  
 **Alternative**: Use `pip` and `venv` (slower): [Run MCP with pip](01_mcp_pip.md)
 
 **Next Step**: [Run the Backend Application](02_backend_uv.md)
