@@ -31,14 +31,17 @@ git clone https://github.com/microsoft/OpenAIWorkshop.git
 
 ### 2. Deploy LLM model using Azure AI Foundry
 
-1. Login to ai.azure.com. Create account if you don't already have access to an account.
+1. Login to **ai.azure.com**. Create account if you don't already have access to an account.
 2. Create project, use new hub is none exists. This will setup a hub, project container, AI services, Storage account and Key Vault
-3. Copy API Key, Azure OpenAI Service endpoint and Project connection string to add to .env file (next step)
-4. On project page, go to Models + endpoints -> Deploy model -> Deploy base model -> gpt-4.1
-5. Select deployment type (Standard, Global Standard etc.) and region if desired
-6. Customize deployment details to reduce tokens per minute to 10k or desired amount
 
-<img width="542" height="431" alt="image" src="https://github.com/user-attachments/assets/b5c5eaee-f44c-4a73-8124-12257163b941" />
+    <img src="docs/media/01_foundry_create_hub.jpg"/>
+
+3. On project page, go to **Models + endpoints** -> Deploy model -> Deploy base model -> gpt-4.1
+4. Select deployment type **Global Standard** and **Korea Central** region if desired
+5. Customize deployment details to reduce tokens per minute to 10k or desired amount
+6. Under **Models + endpoints**, select **gpt-4.1** deployment and copy Azure OpenAI Service endpoint and API Key, to add to .env file (next step)
+
+    <img src="docs/media/01_foundry_deploy_gpt4.jpg"/>
 
   
 ### 3. Set up your environment variables 
@@ -135,25 +138,28 @@ If neither `COSMOSDB_KEY` nor the AAD credential set is provided, the code silen
 
 ### 4. Deploy embedding model using Azure AI Foundry
 
-1. In the same project, go to Models + endpoints -> Deploy model -> Deploy base model -> text-embedding-ada-002
-2. Select deployment type (Standard, Global Standard etc.) and region if desired
+1. In the same project, go to **Models + endpoints** -> Deploy model -> Deploy base model -> text-embedding-ada-002
+2. Select deployment type **Global Standard** and **Korea Central** region if desired
 3. Customize deployment details to reduce tokens per minute to 10k or desired amount
-4. Copy API Key, Azure OpenAI Service endpoint and Project connection string to add to .env file (next step)
+4. Under **Models + endpoints**, select **text-embedding-ada-002** deployment. Copy Azure OpenAI Service endpoint and API Key to add to .env file (next step)
+
+    <img src="docs/media/01_foundry_deploy_embedding.jpg"/>
+
 5. In your source repo, from the root folder, navigate to the `mcp` folder, rename `.env.sample` to `.env`, and fill in all required fields. Here is a sample configuration:  
   
-```bash
-# This file is a sample configuration for the MCP backend services's knowledge retrieval APIs which uses text-embedding-ada-002 embedding model
-AZURE_OPENAI_ENDPOINT="YOUR-OPENAI-SERVICE-ENDPOINT.openai.azure.com"
-AZURE_OPENAI_API_KEY="YOUR-OPENAI-API-KEY"
-AZURE_OPENAI_API_VERSION=2025-03-01-preview
-AZURE_OPENAI_EMBEDDING_DEPLOYMENT="text-embedding-ada-002"
-DB_PATH="data/contoso.db"
-AAD_TENANT_ID=""
-MCP_API_AUDIENCE=""
-MCP_SERVER_URI="http://localhost:8000/mcp"
-DISABLE_AUTH="true"
-```
-<img width="623" height="422" alt="image" src="https://github.com/user-attachments/assets/2f00dfa7-e538-4468-a518-c6d1f3f844d5" />
+    ```bash
+    # This file is a sample configuration for the MCP backend services's knowledge retrieval APIs which uses text-embedding-ada-002 embedding model
+    AZURE_OPENAI_ENDPOINT="YOUR-OPENAI-SERVICE-ENDPOINT.openai.azure.com"
+    AZURE_OPENAI_API_KEY="YOUR-OPENAI-API-KEY"
+    AZURE_OPENAI_API_VERSION=2025-03-01-preview
+    AZURE_OPENAI_EMBEDDING_DEPLOYMENT="text-embedding-ada-002"
+    DB_PATH="data/contoso.db"
+    AAD_TENANT_ID=""
+    MCP_API_AUDIENCE=""
+    MCP_SERVER_URI="http://localhost:8000/mcp"
+    DISABLE_AUTH="true"
+    ```
+
 
 **Make sure your Azure resources are configured to use the correct model deployment names, endpoints, and API versions.**
   

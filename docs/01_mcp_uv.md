@@ -49,7 +49,8 @@ In this part, you will set up the MCP (Model Control Protocol) for the Microsoft
     uv run python mcp_service.py
     ```
     > Note: Let the MCP server run in this terminal window. Open a new terminal window to proceed to the next step.
-    <img width="422" height="379" alt="image" src="https://github.com/user-attachments/assets/fe7d7f17-1d96-4718-af31-c8f927b21619" />
+
+    <img src="media/01_mcp_fastmcp.jpg" />
 
 ## Success criteria
 - MCP server is running and ready to accept requests.
@@ -57,11 +58,12 @@ In this part, you will set up the MCP (Model Control Protocol) for the Microsoft
     ```powershell
     Invoke-WebRequest -Uri "http://localhost:8000/mcp" -Method POST -Headers @{Accept="application/json, text/event-stream";"Content-Type"="application/json"} -Body               '{"jsonrpc":"2.0","id":"init-1","method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"curl","version":"8"}}}'
     ```
-    <img width="269" height="232" alt="image" src="https://github.com/user-attachments/assets/b1dd58f8-68ff-4acd-9e29-df8b4d414808" />
+
+    <img src="media/01_mcp_local_ok.jpg" />
     
     **Note:** This is an MCP server endpoint and cannot be accessed directly via a browser or unsupported transports like SSE. Please use a streamable HTTP transport. This error is expected on your browser.
   
-    <img width="394" height="160" alt="image" src="https://github.com/user-attachments/assets/268b8b2b-9952-4aa0-9b9d-5085016ec130" />
+    <img src="media/01_mcp_localhost_err.png" />
 
  - A sample curl command for ensuring the MCP server is online:
     ```bash

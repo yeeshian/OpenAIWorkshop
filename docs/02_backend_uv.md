@@ -120,7 +120,7 @@ In this part, you will configure and run the backend service for the Microsoft A
     # Output the response
     $response.Content
     ```
-    <img alt="image" src="https://github.com/user-attachments/assets/1f8b992b-3d0e-40c9-8000-484f88e64db5" />
+    <img src="media/02_backend_chat_response.png" />
  
   - A sample curl command to validate things are online:
     ```bash
@@ -129,7 +129,7 @@ In this part, you will configure and run the backend service for the Microsoft A
 
     **Note:** The local server does not return the AI response, if you view from the browser this is expected.
 
-    <img width="188" height="104" alt="image" src="https://github.com/user-attachments/assets/69595c07-c55c-4f07-9b92-63e915ab8f41" />
+    <img src="media/02_backend_localhost_err.png" />
 
 - Ready to connect to frontend
 
